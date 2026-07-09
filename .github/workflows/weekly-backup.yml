@@ -1,0 +1,47 @@
+name: Weekly CSV Backup to Google Drive
+
+on:
+  schedule:
+    - cron: "0 22 * * 0" # UTC Sun 22:00 = JST Mon 07:00
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      FUNCTIONS_BASE_URL: https://puwumxiuhsfmlpfkbbhb.supabase.co/functions/v1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Export subjects.csv
+        run: |
+          curl -sf -X POST "$FUNCTIONS_BASE_URL/backup-export-csv" \
+            -H "X-Backup-Secret: ${{ secrets.BACKUP_EXPORT_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{"table":"subjects"}' -o subjects.csv
+
+      - name: Export responses.csv
+        run: |
+          curl -sf -X POST "$FUNCTIONS_BASE_URL/backup-export-csv" \
+            -H "X-Backup-Secret: ${{ secrets.BACKUP_EXPORT_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{"table":"responses"}' -o responses.csv
+
+      - name: Sanity-check CSVs are non-empty
+        run: test -s subjects.csv && test -s responses.csv
+
+      - name: Upload to Google Drive
+        run: node scripts/backup-to-drive.mjs
+        env:
+          GDRIVE_SA_KEY: ${{ secrets.GDRIVE_SA_KEY }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}

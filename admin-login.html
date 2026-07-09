@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>管理者ログイン | ADOC-S 研究アプリ</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div id="app" class="page">
+  <div class="card">
+    <h1>管理者ログイン</h1>
+    <p class="lead">管理者IDとパスワードを入力してください</p>
+
+    <div v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
+
+    <form @submit.prevent="onSubmit">
+      <div class="field">
+        <label for="admin_code">管理者ID</label>
+        <input
+          id="admin_code"
+          type="text"
+          autocomplete="off"
+          v-model="adminCode"
+          :disabled="loading"
+        />
+      </div>
+      <div class="field">
+        <label for="password">パスワード</label>
+        <input
+          id="password"
+          type="password"
+          autocomplete="off"
+          v-model="password"
+          :disabled="loading"
+        />
+      </div>
+      <div class="btn-row">
+        <button type="submit" class="btn-primary" :disabled="loading || !adminCode || !password">
+          {{ loading ? '確認中…' : 'ログイン' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="js/config.js"></script>
+<script src="js/messages.js"></script>
+<script src="js/admin-session.js"></script>
+<script src="js/api.js"></script>
+<script>
+const { createApp } = Vue;
+
+createApp({
+  data() {
+    return {
+      adminCode: "",
+      password: "",
+      loading: false,
+      errorMessage: "",
+    };
+  },
+  mounted() {
+    AdminSession.clear();
+  },
+  methods: {
+    async onSubmit() {
+      if (this.loading) return;
+      this.loading = true;
+      this.errorMessage = "";
+
+      const result = await Api.callFunction("admin-login", {
+        body: { admin_code: this.adminCode.trim(), password: this.password },
+      });
+
+      this.loading = false;
+
+      if (!result.ok) {
+        this.errorMessage = result.message;
+        return;
+      }
+
+      AdminSession.save({
+        token: result.data.token,
+        adminCode: result.data.admin_code,
+        name: result.data.name,
+      });
+
+      window.location.href = "admin.html";
+    },
+  },
+}).mount("#app");
+</script>
+</body>
+</html>

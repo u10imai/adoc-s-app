@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ログイン | ADOC-S 研究アプリ</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div id="app" class="page">
+  <div class="card">
+    <h1>ログイン</h1>
+    <p class="lead">IDとパスワードを入力してください</p>
+
+    <div v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
+
+    <form @submit.prevent="onSubmit">
+      <div class="field">
+        <label for="subject_code">ID</label>
+        <input
+          id="subject_code"
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          v-model="subjectCode"
+          :disabled="loading"
+        />
+      </div>
+      <div class="field">
+        <label for="password">パスワード</label>
+        <input
+          id="password"
+          type="password"
+          autocomplete="off"
+          v-model="password"
+          :disabled="loading"
+        />
+      </div>
+      <div class="btn-row">
+        <button type="submit" class="btn-primary" :disabled="loading || !subjectCode || !password">
+          {{ loading ? '確認中…' : 'ログイン' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="js/config.js"></script>
+<script src="js/messages.js"></script>
+<script src="js/session.js"></script>
+<script src="js/api.js"></script>
+<script>
+const { createApp } = Vue;
+
+createApp({
+  data() {
+    return {
+      subjectCode: "",
+      password: "",
+      loading: false,
+      errorMessage: "",
+    };
+  },
+  mounted() {
+    // ログイン画面に来た時点で古いセッションは破棄しておく
+    Session.clear();
+  },
+  methods: {
+    async onSubmit() {
+      if (this.loading) return;
+      this.loading = true;
+      this.errorMessage = "";
+
+      const result = await Api.callFunction("login", {
+        body: { subject_code: this.subjectCode.trim(), password: this.password },
+      });
+
+      this.loading = false;
+
+      if (!result.ok) {
+        this.errorMessage = result.message;
+        return;
+      }
+
+      Session.save({
+        token: result.data.token,
+        subjectCode: result.data.subject_code,
+        ageGroup: result.data.age_group,
+      });
+
+      if (result.data.is_first_login) {
+        window.location.href = "basic-info.html";
+      } else {
+        window.location.href = "assessment.html";
+      }
+    },
+  },
+}).mount("#app");
+</script>
+</body>
+</html>

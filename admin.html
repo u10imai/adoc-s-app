@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>管理者画面 | ADOC-S 研究アプリ</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div id="app" class="page">
+  <div class="card card--dashboard">
+    <h1>管理者画面</h1>
+    <p class="lead" v-if="admin">{{ admin.name }}さん({{ admin.adminCode }})</p>
+
+    <div v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
+
+    <div class="tab-bar">
+      <button type="button" :class="{ active: activeTab === 'issue' }" @click="switchTab('issue')">ID発行</button>
+      <button type="button" :class="{ active: activeTab === 'progress' }" @click="switchTab('progress')">進捗確認</button>
+      <button type="button" :class="{ active: activeTab === 'score' }" @click="switchTab('score')">採点</button>
+      <button type="button" :class="{ active: activeTab === 'csv' }" @click="switchTab('csv')">CSVエクスポート</button>
+      <button type="button" :class="{ active: activeTab === 'errors' }" @click="switchTab('errors')">エラーログ</button>
+    </div>
+
+    <!-- ID発行 -->
+    <section v-if="activeTab === 'issue'">
+      <p>新しい被験者IDとパスワードを発行します。</p>
+      <div class="btn-row">
+        <button type="button" class="btn-primary" :disabled="issuing" @click="issueSubject">
+          {{ issuing ? '発行中…' : '新規発行' }}
+        </button>
+      </div>
+
+      <div v-if="issuedSubject" class="credential-box">
+        <p>この内容は今回しか表示されません。担当者にお伝えください。</p>
+        <p>ID: <span class="value">{{ issuedSubject.subject_code }}</span></p>
+        <p>パスワード: <span class="value" @click="copyPassword">{{ issuedSubject.password }}</span></p>
+        <p v-if="copyState">{{ copyState }}</p>
+      </div>
+    </section>
+
+    <!-- 進捗確認 -->
+    <section v-if="activeTab === 'progress'">
+      <div class="btn-row">
+        <button type="button" class="btn-secondary btn-small" :disabled="progressLoading" @click="loadProgress">
+          {{ progressLoading ? '更新中…' : '更新' }}
+        </button>
+      </div>
+      <div v-if="progressLoading && !progressLoaded" class="spinner-text">読み込み中…</div>
+      <div class="data-table-wrap" v-if="progressLoaded">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>年齢群</th>
+              <th>基本情報</th>
+              <th>進捗</th>
+              <th>登録日時</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="s in progressList" :key="s.subject_code">
+              <td>{{ s.subject_code }}</td>
+              <td>{{ s.age_group || '(未設定)' }}</td>
+              <td>{{ s.basic_info_completed ? '完了' : '未完了' }}</td>
+              <td>{{ s.total !== null ? `${s.answered}/${s.total}` : '-' }}</td>
+              <td>{{ s.created_at }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 採点 -->
+    <section v-if="activeTab === 'score'">
+      <template v-if="!selectedSubject">
+        <div class="btn-row">
+          <button type="button" class="btn-secondary btn-small" :disabled="scoreSummaryLoading" @click="loadScoreSummary">
+            {{ scoreSummaryLoading ? '更新中…' : '更新' }}
+          </button>
+        </div>
+        <div v-if="scoreSummaryLoading && !scoreSummaryLoaded" class="spinner-text">読み込み中…</div>
+        <div class="data-table-wrap" v-if="scoreSummaryLoaded">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>回答数</th>
+                <th>採点済</th>
+                <th>未採点</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="s in scoreSummary" :key="s.subject_id">
+                <td>{{ s.subject_code }}</td>
+                <td>{{ s.total }}</td>
+                <td>{{ s.scored }}</td>
+                <td>{{ s.unscored }}</td>
+                <td><button type="button" class="btn-primary btn-small" @click="selectSubjectForScoring(s)">採点する</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </template>
+
+      <template v-else>
+        <div class="btn-row">
+          <button type="button" class="btn-secondary btn-small" @click="backToSummary">一覧に戻る</button>
+          <button type="button" class="btn-secondary btn-small" :disabled="scoreRowsLoading" @click="selectSubjectForScoring(selectedSubject)">
+            {{ scoreRowsLoading ? '更新中…' : '更新' }}
+          </button>
+        </div>
+        <h2>{{ selectedSubject.subject_code }} の採点</h2>
+        <div v-if="scoreRowsLoading" class="spinner-text">読み込み中…</div>
+        <div class="data-table-wrap" v-else>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>イラスト</th>
+                <th>正解</th>
+                <th>発話内容</th>
+                <th>選択肢回答</th>
+                <th>採点</th>
+                <th>採点者</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in scoreRows" :key="row.id" :class="{ 'row-scored': row.human_score !== '未評価' }">
+                <td><img :src="row.illustration?.image_url" alt="イラスト" class="thumb" /></td>
+                <td>{{ row.illustration?.correct_label }}</td>
+                <td>{{ row.verbal_response || '-' }}</td>
+                <td>{{ row.used_choices ? (row.selected_choice_label || '(未選択)') : '-' }}</td>
+                <td>
+                  <select v-model="row.draftScore" :disabled="savingRowId === row.id">
+                    <option value="未評価">未評価</option>
+                    <option value="正解">正解</option>
+                    <option value="不正解">不正解</option>
+                  </select>
+                </td>
+                <td>{{ row.human_scorer || '-' }}</td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn-primary btn-small"
+                    :disabled="savingRowId === row.id || row.draftScore === row.human_score"
+                    @click="submitScore(row)"
+                  >保存</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </template>
+    </section>
+
+    <!-- CSVエクスポート -->
+    <section v-if="activeTab === 'csv'">
+      <p>被験者データ・回答データをそれぞれCSV形式でダウンロードします。</p>
+      <div class="btn-row">
+        <button type="button" class="btn-primary" :disabled="csvLoading.subjects" @click="downloadCsv('subjects')">
+          {{ csvLoading.subjects ? 'ダウンロード中…' : '被験者データ(subjects.csv)' }}
+        </button>
+        <button type="button" class="btn-primary" :disabled="csvLoading.responses" @click="downloadCsv('responses')">
+          {{ csvLoading.responses ? 'ダウンロード中…' : '回答データ(responses.csv)' }}
+        </button>
+      </div>
+    </section>
+
+    <!-- エラーログ -->
+    <section v-if="activeTab === 'errors'">
+      <div class="btn-row">
+        <button type="button" class="btn-secondary btn-small" :disabled="errorLogsLoading" @click="loadErrorLogs">
+          {{ errorLogsLoading ? '更新中…' : '更新' }}
+        </button>
+      </div>
+      <div v-if="errorLogsLoading && !errorLogsLoaded" class="spinner-text">読み込み中…</div>
+      <div class="data-table-wrap" v-if="errorLogsLoaded">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>発生日時</th>
+              <th>被験者ID</th>
+              <th>内容</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="log in errorLogs" :key="log.id">
+              <td>{{ log.occurred_at }}</td>
+              <td>{{ log.subject_code || '-' }}</td>
+              <td>{{ log.error_detail }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="js/config.js"></script>
+<script src="js/messages.js"></script>
+<script src="js/admin-session.js"></script>
+<script src="js/api.js"></script>
+<script>
+const { createApp } = Vue;
+
+createApp({
+  data() {
+    return {
+      admin: null,
+      activeTab: "issue",
+      errorMessage: "",
+
+      issuing: false,
+      issuedSubject: null,
+      copyState: "",
+
+      progressLoading: false,
+      progressLoaded: false,
+      progressList: [],
+
+      scoreSummaryLoading: false,
+      scoreSummaryLoaded: false,
+      scoreSummary: [],
+      selectedSubject: null,
+      scoreRowsLoading: false,
+      scoreRows: [],
+      savingRowId: null,
+
+      csvLoading: { subjects: false, responses: false },
+
+      errorLogsLoading: false,
+      errorLogsLoaded: false,
+      errorLogs: [],
+    };
+  },
+  mounted() {
+    this.admin = AdminSession.requireLoginOrRedirect();
+  },
+  methods: {
+    switchTab(tab) {
+      this.activeTab = tab;
+      this.errorMessage = "";
+      if (tab === "progress" && !this.progressLoaded) this.loadProgress();
+      if (tab === "score" && !this.scoreSummaryLoaded) this.loadScoreSummary();
+      if (tab === "errors" && !this.errorLogsLoaded) this.loadErrorLogs();
+    },
+    handleUnauthorized(result) {
+      if (result.status === 401) {
+        AdminSession.clear();
+        setTimeout(() => { window.location.href = "admin-login.html"; }, 1500);
+      }
+    },
+    async issueSubject() {
+      if (this.issuing) return;
+      this.issuing = true;
+      this.errorMessage = "";
+      this.copyState = "";
+
+      const result = await Api.callFunction("admin-issue-subject", { token: this.admin.token });
+
+      this.issuing = false;
+
+      if (!result.ok) {
+        this.errorMessage = result.message;
+        this.handleUnauthorized(result);
+        return;
+      }
+
+      this.issuedSubject = { subject_code: result.data.subject_code, password: result.data.password };
+      this.progressLoaded = false;
+    },
+    copyPassword() {
+      if (!this.issuedSubject) return;
+      navigator.clipboard.writeText(this.issuedSubject.password).then(() => {
+        this.copyState = "コピーしました";
+        setTimeout(() => { this.copyState = ""; }, 2000);
+      }).catch(() => {});
+    },
+    async loadProgress() {
+      this.progressLoading = true;
+      this.errorMessage = "";
+
+      const result = await Api.callFunction("admin-progress-list", { token: this.admin.token });
+
+      this.progressLoading = false;
+
+      if (!result.ok) {
+        this.errorMessage = result.message;
+        this.handleUnauthorized(result);
+        return;
+      }
+
+      this.progressList = result.data.subjects;
+      this.progressLoaded = true;
+    },
+    async loadScoreSummary() {
+      this.scoreSummaryLoading = true;
+      this.errorMessage = "";
+      this.selectedSubject = null;
+
+      const result = await Api.callFunction("admin-score-list", { token: this.admin.token, body: {} });
+
+      this.scoreSummaryLoading = false;
+
+      if (!result.ok) {
+        this.errorMessage = result.message;
+        this.handleUnauthorized(result);
+        return;
+      }
+
+      this.scoreSummary = result.data.subjects;
+      this.scoreSummaryLoaded = true;
+    },
+    async selectSubjectForScoring(s) {
+      this.selectedSubject = { subject_id: s.subject_id, subject_code: s.subject_code };
+      this.scoreRowsLoading = true;
+      this.errorMessage = "";
+
+      const result = await Api.callFunction("admin-score-list", {
+        token: this.admin.token,
+        body: { subject_id: s.subject_id },
+      });
+
+      this.scoreRowsLoading = false;
+
+      if (!result.ok) {
+        this.errorMessage = result.message;
+        this.handleUnauthorized(result);
+        return;
+      }
+
+      this.scoreRows = result.data.responses.map((r) => ({ ...r, draftScore: r.human_score }));
+    },
+    backToSummary() {
+      this.selectedSubject = null;
+      this.scoreRows = [];
+    },
+    async submitScore(row) {
+      if (this.savingRowId) return;
+
+      if (row.human_score !== "未評価") {
+        const ok = window.confirm(
+          `この行はすでに${row.human_scorer || "他の採点者"}さんが「${row.human_score}」と採点済みです。上書きしますか?`
+        );
+        if (!ok) return;
+      }
+
+      this.savingRowId = row.id;
+      this.errorMessage = "";
+
+      const result = await Api.callFunction("admin-submit-score", {
+        token: this.admin.token,
+        body: { response_id: row.id, human_score: row.draftScore },
+      });
+
+      this.savingRowId = null;
+
+      if (!result.ok) {
+        this.errorMessage = result.message;
+        this.handleUnauthorized(result);
+        return;
+      }
+
+      row.human_score = result.data.human_score;
+      row.human_scorer = result.data.human_scorer;
+      row.human_scored_at = result.data.human_scored_at;
+    },
+    async loadErrorLogs() {
+      this.errorLogsLoading = true;
+      this.errorMessage = "";
+
+      const result = await Api.callFunction("admin-error-logs", { token: this.admin.token });
+
+      this.errorLogsLoading = false;
+
+      if (!result.ok) {
+        this.errorMessage = result.message;
+        this.handleUnauthorized(result);
+        return;
+      }
+
+      this.errorLogs = result.data.logs;
+      this.errorLogsLoaded = true;
+    },
+    async downloadCsv(table) {
+      this.csvLoading[table] = true;
+      this.errorMessage = "";
+
+      const today = new Date().toISOString().slice(0, 10);
+      const result = await Api.downloadFile("admin-export-csv", {
+        token: this.admin.token,
+        body: { table },
+        filename: `${table}_${today}.csv`,
+      });
+
+      this.csvLoading[table] = false;
+
+      if (!result.ok) {
+        this.errorMessage = result.message;
+        this.handleUnauthorized(result);
+      }
+    },
+  },
+}).mount("#app");
+</script>
+</body>
+</html>

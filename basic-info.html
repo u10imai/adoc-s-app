@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>基本情報の入力 | ADOC-S 研究アプリ</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div id="app" class="page">
+  <div class="card">
+    <h1>基本情報の入力</h1>
+    <p class="lead">最初に一度だけ、対象のお子さまについて教えてください</p>
+
+    <div v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
+
+    <form @submit.prevent="onSubmit">
+      <div class="field">
+        <label for="age_months">月齢(わかる場合のみ、任意)</label>
+        <input
+          id="age_months"
+          type="number"
+          min="0"
+          max="300"
+          v-model="ageMonths"
+          :disabled="loading"
+          placeholder="例: 54"
+        />
+        <div class="hint">わからない場合は空欄のままで構いません</div>
+      </div>
+
+      <div class="field">
+        <label for="grade">学年</label>
+        <select id="grade" v-model="grade" :disabled="loading">
+          <option value="" disabled>選択してください</option>
+          <option v-for="g in grades" :key="g" :value="g">{{ g }}</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>診断や発達上の特性で気になる点はありますか</label>
+        <div class="radio-group">
+          <label><input type="radio" value="yes" v-model="hasDiagnosis" :disabled="loading" /> ある</label>
+          <label><input type="radio" value="no" v-model="hasDiagnosis" :disabled="loading" /> ない</label>
+        </div>
+      </div>
+
+      <div class="field" v-if="hasDiagnosis === 'yes'">
+        <label for="diagnosis_note">差し支えない範囲でご記入ください</label>
+        <textarea id="diagnosis_note" v-model="diagnosisNote" :disabled="loading"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="examiner_type">検査者区分</label>
+        <select id="examiner_type" v-model="examinerType" :disabled="loading">
+          <option value="" disabled>選択してください</option>
+          <option value="保護者">保護者</option>
+          <option value="研究者">研究者</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+
+      <div class="btn-row">
+        <button type="submit" class="btn-primary" :disabled="loading || !canSubmit">
+          {{ loading ? '保存中…' : '次へ進む' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="js/config.js"></script>
+<script src="js/messages.js"></script>
+<script src="js/session.js"></script>
+<script src="js/api.js"></script>
+<script>
+const { createApp } = Vue;
+
+createApp({
+  data() {
+    return {
+      grades: ["年少", "年中", "年長", "小学校1年", "小学校2年", "小学校3年", "小学校4年", "小学校5年", "小学校6年", "中学生"],
+      ageMonths: "",
+      grade: "",
+      hasDiagnosis: "",
+      diagnosisNote: "",
+      examinerType: "",
+      loading: false,
+      errorMessage: "",
+      session: null,
+    };
+  },
+  computed: {
+    canSubmit() {
+      return Boolean(this.grade) && Boolean(this.hasDiagnosis) && Boolean(this.examinerType);
+    },
+  },
+  mounted() {
+    this.session = Session.requireLoginOrRedirect();
+  },
+  methods: {
+    async onSubmit() {
+      if (this.loading || !this.session) return;
+      this.loading = true;
+      this.errorMessage = "";
+
+      const result = await Api.callFunction("submit-basic-info", {
+        token: this.session.token,
+        body: {
+          age_months: this.ageMonths === "" ? null : Number(this.ageMonths),
+          grade: this.grade,
+          has_diagnosis: this.hasDiagnosis === "yes",
+          diagnosis_note: this.diagnosisNote,
+          examiner_type: this.examinerType,
+        },
+      });
+
+      this.loading = false;
+
+      if (!result.ok) {
+        this.errorMessage = result.message;
+        if (result.status === 401) {
+          Session.clear();
+          setTimeout(() => { window.location.href = "login.html"; }, 1500);
+        }
+        return;
+      }
+
+      window.location.href = "assessment.html";
+    },
+  },
+}).mount("#app");
+</script>
+</body>
+</html>

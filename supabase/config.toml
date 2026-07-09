@@ -1,0 +1,49 @@
+# このアプリはSupabase Authを使わず、Edge Function内で独自のJWTを発行・検証するため、
+# 全FunctionでSupabaseプラットフォーム側のJWT検証(verify_jwt)を無効化する。
+# (無効化しないと、フロントエンドはAuthorizationヘッダーに毎回anonキーを
+#  埋め込む必要が生じ、独自トークンをそこに使えなくなるため)
+# 認証・認可自体は各Function内でAPP_JWT_SECRETによる署名検証を行っている。
+
+[functions.login]
+verify_jwt = false
+
+[functions.submit-basic-info]
+verify_jwt = false
+
+[functions.log-error]
+verify_jwt = false
+
+# 以下は③④で追加実装予定のFunction。デプロイ前に本ファイルへ追記すること。
+[functions.get-next-question]
+verify_jwt = false
+
+[functions.submit-response]
+verify_jwt = false
+
+[functions.admin-login]
+verify_jwt = false
+
+[functions.admin-issue-subject]
+verify_jwt = false
+
+[functions.admin-export-csv]
+verify_jwt = false
+
+[functions.admin-progress-list]
+verify_jwt = false
+
+[functions.admin-score-list]
+verify_jwt = false
+
+[functions.admin-submit-score]
+verify_jwt = false
+
+[functions.admin-error-logs]
+verify_jwt = false
+
+# 以下は⑤で追加実装したFunction(GitHub Actions専用、被験者/管理者JWTは使わない)。
+[functions.health-check]
+verify_jwt = false
+
+[functions.backup-export-csv]
+verify_jwt = false
