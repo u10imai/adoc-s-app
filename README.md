@@ -229,30 +229,47 @@ supabase functions deploy admin-error-logs
 
 新規に、認証不要の`health-check`(keep-alive用)と、固定の共有シークレットのみで認証する`backup-export-csv`(週次バックアップ専用、CIから呼ばれることのみを想定)の2つのEdge Functionを追加しています。管理者アカウントのJWTは12時間で失効しCIでの定期実行に向かないため、あえて別方式にしています。また、CSV生成ロジックを`admin-export-csv`と`backup-export-csv`で共通化するリファクタも行ったため、`admin-export-csv`も再デプロイ対象です。
 
-### 1. Google Cloudでサービスアカウントを作成する
+**注意**: Google Driveへのアップロードは、個人のGoogleアカウント(Google Workspaceの共有ドライブが使えない場合)を想定し、サービスアカウントではなく**OAuth(ご自身のGoogleアカウントで一度だけ認可する方式)**を使います。サービスアカウントは自分自身のストレージ容量を持たないため、共有ドライブがない個人アカウントの通常フォルダには書き込めません(`storageQuotaExceeded`エラーになります)。
+
+### 1. Google CloudでOAuthクライアントIDを作成する
 
 1. [Google Cloud Console](https://console.cloud.google.com/)で新規または既存のプロジェクトを開く
 2. 「APIとサービス」→「ライブラリ」から **Google Drive API** を有効化する
-3. 「IAMと管理」→「サービスアカウント」→「作成」で新規サービスアカウントを作成する(権限の付与は不要、Driveへのアクセスは手順2のフォルダ共有で行います)
-4. 作成したサービスアカウントの「キー」タブから「鍵を追加」→ JSON形式でダウンロードする(このJSONファイルの中身をあとで使います)
+3. 「APIとサービス」→「OAuth同意画面」がまだ未設定なら、「External」を選び、アプリ名・自分のメールアドレスなど最低限の情報を入力して保存する(テストユーザーとして自分のGoogleアカウントを追加してください)
+4. 「APIとサービス」→「認証情報」→「認証情報を作成」→「OAuthクライアントID」→ アプリケーションの種類は **デスクトップアプリ** を選択して作成する
+5. 作成後に表示される「クライアントID」と「クライアントシークレット」を控える
 
-### 2. Google Driveにバックアップ用フォルダを作成し、サービスアカウントと共有する
+### 2. Google Driveにバックアップ用フォルダを作成する
 
-1. Google Driveでバックアップ保存用のフォルダを新規作成する
-2. そのフォルダを右クリック→「共有」→ 手順1でダウンロードしたJSON内の`client_email`のアドレス(`xxxxx@xxxxx.iam.gserviceaccount.com`のような形式)を「編集者」権限で追加する
-3. フォルダを開いた時のURL(`https://drive.google.com/drive/folders/<フォルダID>`)から`<フォルダID>`の部分を控える
+1. バックアップ先に使いたいGoogleアカウントで、Google Driveにバックアップ保存用のフォルダを新規作成する(自分のアカウントの通常のフォルダで構いません、共有設定は不要です)
+2. フォルダを開いた時のURL(`https://drive.google.com/drive/folders/<フォルダID>`)から`<フォルダID>`の部分を控える
 
-### 3. GitHub Secretsを登録する
+### 3. 手元でリフレッシュトークンを取得する
+
+このリポジトリのルートで、以下を実行してください(GitHub Actions上ではなく、自分のPCで一度だけ行う作業です)。
+
+```bash
+npm install
+GOOGLE_OAUTH_CLIENT_ID=<手順1で控えたクライアントID> \
+GOOGLE_OAUTH_CLIENT_SECRET=<手順1で控えたクライアントシークレット> \
+node scripts/get-refresh-token.mjs
+```
+
+表示されたURLをブラウザで開き、バックアップ先に使いたいGoogleアカウントでログインして許可してください。許可すると、ターミナルに「リフレッシュトークン」が表示されます。この値は後で使うので控えておいてください(この画面以外では二度と表示されません。紛失した場合は同じスクリプトをもう一度実行すれば再取得できます)。
+
+### 4. GitHub Secretsを登録する
 
 このリポジトリのGitHub(Settings → Secrets and variables → Actions → New repository secret)に以下を登録してください。
 
 | Secret名 | 値 |
 |---|---|
-| `BACKUP_EXPORT_SECRET` | 次の手順4でSupabase側に登録するのと同じランダム文字列 |
-| `GDRIVE_SA_KEY` | 手順1でダウンロードしたJSON鍵ファイルの中身全文 |
+| `BACKUP_EXPORT_SECRET` | 次の手順5でSupabase側に登録するのと同じランダム文字列 |
+| `GOOGLE_OAUTH_CLIENT_ID` | 手順1で控えたクライアントID |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | 手順1で控えたクライアントシークレット |
+| `GOOGLE_OAUTH_REFRESH_TOKEN` | 手順3で取得したリフレッシュトークン |
 | `GDRIVE_FOLDER_ID` | 手順2で控えたフォルダID |
 
-### 4. Supabase Secretを登録する
+### 5. Supabase Secretを登録する
 
 ```bash
 # ランダムな共有シークレットを生成する例
@@ -263,7 +280,7 @@ openssl rand -hex 32
 supabase secrets set BACKUP_EXPORT_SECRET=<生成した文字列>
 ```
 
-### 5. Edge Functionをデプロイする
+### 6. Edge Functionをデプロイする
 
 ```bash
 supabase functions deploy health-check
@@ -273,18 +290,18 @@ supabase functions deploy admin-export-csv
 
 (`admin-export-csv`はCSV生成ロジックの共通化リファクタに伴う再デプロイです。動作自体は変わりません。)
 
-### 6. ワークフローファイルについて
+### 7. ワークフローファイルについて
 
 - `.github/workflows/keep-alive.yml`: 毎日2回(JST 9:00 / 21:00)、`health-check`にリクエストを送るだけのシンプルなワークフローです。
 - `.github/workflows/weekly-backup.yml`: 毎週月曜7:00(JST)に、`backup-export-csv`からsubjects/responses両方のCSVを取得し、Google Driveにアップロードします。
 
 どちらも`workflow_dispatch`が有効なので、GitHubリポジトリの「Actions」タブから手動実行できます。このリポジトリをGitHubにpushし、上記のSecretsを登録した後で動作確認してください。
 
-### 7. 動作確認する
+### 8. 動作確認する
 
 1. GitHubの「Actions」タブから `Supabase Keep-Alive` を「Run workflow」で手動実行し、成功(緑のチェック)になること
 2. 同様に `Weekly CSV Backup to Google Drive` を手動実行し、成功になること
-3. 手順2で共有したGoogle Driveフォルダに `subjects_YYYY-MM-DD.csv` / `responses_YYYY-MM-DD.csv` が作成されており、Excel等で開いて日本語が文字化けしないこと
+3. 手順2で作成したGoogle Driveフォルダに `subjects_YYYY-MM-DD.csv` / `responses_YYYY-MM-DD.csv` が作成されており、Excel等で開いて日本語が文字化けしないこと
 4. わざと間違った値で`backup-export-csv`を直接curlで叩き、401が返ってくること(例: `curl -X POST <FUNCTIONS_BASE_URL>/backup-export-csv -H "X-Backup-Secret: wrong" -d '{"table":"subjects"}'`)
 5. ④の「CSVエクスポート」(`admin-export-csv`)が引き続き正常動作すること(リファクタの回帰確認)
 6. Supabaseダッシュボード→Edge Functionsで `health-check` / `backup-export-csv` が両方 `Active` になっていること
@@ -295,11 +312,11 @@ supabase functions deploy admin-export-csv
 
 研究が終了しこのアプリが不要になったら、以下を行ってセキュリティ上の後始末をしてください。
 
-1. GitHub Secrets(`BACKUP_EXPORT_SECRET` / `GDRIVE_SA_KEY` / `GDRIVE_FOLDER_ID`)をSettings → Secrets and variables → Actionsから削除する
+1. GitHub Secrets(`BACKUP_EXPORT_SECRET` / `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` / `GOOGLE_OAUTH_REFRESH_TOKEN` / `GDRIVE_FOLDER_ID`)をSettings → Secrets and variables → Actionsから削除する
 2. `supabase secrets unset BACKUP_EXPORT_SECRET` を実行する
 3. `.github/workflows/keep-alive.yml` / `weekly-backup.yml` を削除するか、Actionsタブから個別に「Disable workflow」する(定期実行だけ止めたい場合は各ファイルの`schedule:`の行を削除し`workflow_dispatch`だけ残す方法もあります)
-4. Google Cloud Console → IAMと管理 → サービスアカウント から該当の鍵を削除(失効)する。本研究専用のGCPプロジェクトであれば、プロジェクトごと削除しても構いません
-5. Google Driveのバックアップフォルダの共有設定から、サービスアカウントのメールアドレスを削除する
+4. Google Cloud Console → APIとサービス → 認証情報 から、作成したOAuthクライアントIDを削除する。本研究専用のGCPプロジェクトであれば、プロジェクトごと削除しても構いません
+5. Google Driveのバックアップフォルダ(自分のアカウントの通常フォルダ)は、不要であれば削除する
 
 ---
 

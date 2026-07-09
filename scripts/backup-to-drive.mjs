@@ -1,15 +1,17 @@
 import { google } from "googleapis";
 import fs from "node:fs";
 
-// サービスアカウントはDriveストレージを持たないため、明示的に共有されたフォルダ
-// にしかアクセスできない。drive.fileスコープは「アプリ自身が作成したファイル」
-// または「ユーザーがピッカーで開いたファイル」にしかアクセスを保証しないため、
-// 後から共有したフォルダへの書き込みには広い drive スコープを使う。
-const auth = new google.auth.GoogleAuth({
-  credentials: JSON.parse(process.env.GDRIVE_SA_KEY),
-  scopes: ["https://www.googleapis.com/auth/drive"],
-});
-const drive = google.drive({ version: "v3", auth });
+// 個人のGoogleアカウントにはGoogle Workspaceの共有ドライブがなく、
+// サービスアカウントは自分自身のストレージ容量を持たないため
+// (storageQuotaExceededエラーになる)、ここでは本人のGoogleアカウントに
+// リフレッシュトークンで認可されたOAuthクライアントを使ってアップロードする。
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_OAUTH_CLIENT_ID,
+  process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+);
+oauth2Client.setCredentials({ refresh_token: process.env.GOOGLE_OAUTH_REFRESH_TOKEN });
+
+const drive = google.drive({ version: "v3", auth: oauth2Client });
 
 const folderId = process.env.GDRIVE_FOLDER_ID;
 const today = new Date().toISOString().slice(0, 10);
