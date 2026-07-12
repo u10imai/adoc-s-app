@@ -28,10 +28,21 @@ console.log("以下のURLをブラウザで開き、バックアップ先に使�
 console.log(authUrl, "\n");
 
 const server = http.createServer(async (req, res) => {
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+
   const url = new URL(req.url, REDIRECT_URI);
+  if (url.pathname === "/favicon.ico") {
+    res.statusCode = 204;
+    res.end();
+    return;
+  }
+
   const code = url.searchParams.get("code");
+  const errorParam = url.searchParams.get("error");
   if (!code) {
-    res.end("codeが見つかりませんでした。");
+    console.log("code が見つかりませんでした。受信したURL:", req.url);
+    if (errorParam) console.log("Googleから返されたerror:", errorParam);
+    res.end(`codeが見つかりませんでした。error=${errorParam ?? "(なし)"}。ターミナルのログも確認してください。`);
     return;
   }
   res.end("認証できました。このタブは閉じて構いません。ターミナルに戻ってください。");

@@ -15,7 +15,7 @@
 - [x] ②認証・基本情報画面
 - [x] ③イラスト回答画面
 - [x] ④管理者画面
-- [ ] ⑤GitHub Actions自動化
+- [x] ⑤GitHub Actions自動化
 
 ---
 
