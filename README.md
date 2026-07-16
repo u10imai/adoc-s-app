@@ -237,6 +237,23 @@ supabase functions deploy admin-error-logs
 6. 「エラーログ」タブで`error_logs`の内容が一覧表示されること
 7. 一般ログイン画面(`login.html`)と管理者ログイン画面(`admin-login.html`)は完全に別のセッションとして扱われ、互いに影響しないことを確認(片方でログインしたままもう片方を開いても、それぞれ別々にログインが必要)
 
+### 5. 【追記】本番/テストID発行の切り替えと発行済み一覧を追加した際の手順
+
+ID発行時に「本番(001番台)」「テスト(201番台)」を選べるようにし、「ID発行」タブに発行済みID・パスワードの一覧を常時表示するようにしました。
+
+`supabase/migrations/0005_add_subject_type_and_test_sequence.sql`を①と同じ方法で適用し、以下を(再)デプロイしてください。
+
+```bash
+supabase functions deploy admin-issue-subject
+supabase functions deploy admin-progress-list
+supabase functions deploy admin-export-csv
+supabase functions deploy backup-export-csv
+```
+
+**設計メモ**: 被験者のパスワードは通常、発行直後の1回しか表示しない設計でしたが、今回`subjects.password_plain`列に平文で保存し、「ID発行」タブの一覧からいつでも確認できるようにしました(管理者ログインを突破しないと辿り着けない画面のため)。ただし、CSVエクスポート(`admin-export-csv`・週次バックアップの`backup-export-csv`)には`password_plain`を含めていません。特に週次バックアップはGoogle Driveに保存されるため、そちらに生パスワードが漏れないようにするためです。
+
+本番運用開始時、テスト用に発行した`subject_code`が本番の連番(`subject_code_seq`)を消費してしまっている場合は、①の手順4と同様にSQL Editorでテスト被験者を削除したうえで、`alter sequence subject_code_seq restart with 1;`を実行してください。
+
 ---
 
 ## ⑤GitHub Actions自動化セットアップ手順(このステージで必要な作業)
