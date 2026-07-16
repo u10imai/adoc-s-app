@@ -160,6 +160,8 @@ window.APP_CONFIG = {
 
 問題なければ、一度ログアウトする代わりにブラウザのプライベートウィンドウ等で再度ID `001` でログインし、今度は基本情報入力をスキップして仮の確認画面に直接遷移することも確認してください(2回目以降ログインの分岐)。
 
+**追記(後日の修正)**: 基本情報入力の項目を見直し、先頭に「検査者」「検査日」を追加、「月齢」の直接入力は廃止して「生年月日」(任意)の入力に変更しました。月齢は検査日と生年月日から自動計算されます。この変更には`supabase/migrations/0004_add_exam_metadata_and_survey.sql`の適用と、`submit-basic-info`の再デプロイが必要です(手順は次の③セクション末尾を参照)。
+
 ---
 
 ## ③イラスト回答画面セットアップ手順(このステージで必要な作業)
@@ -181,7 +183,21 @@ supabase functions deploy submit-response
 2. 「わからない」を押すと選択肢が表示され、選択して「次へ」を押しても正しく進むこと
 3. 進捗表示(`n/m枚`)が回答するごとに1ずつ増えること
 4. 「今日はここまで」を押すとログイン画面に戻り、再ログインすると続き(未回答分)から再開されること
-5. すべてのイラストに回答し終えると「これで終了です。お疲れ様でした。」の終了画面が表示されること
+5. すべてのイラストに回答し終えると、感想アンケート(子どもの難易度感想・保護者/検査者から見た理解度)が1回だけ表示され、送信すると「これで終了です。お疲れ様でした。」の終了画面が表示されること
+
+### 3. 【追記】検査日・生年月日・感想アンケート機能を追加した際の手順
+
+`supabase/migrations/0004_add_exam_metadata_and_survey.sql`を①と同じ方法(SQL EditorまたはCLI)で適用し、以下を(再)デプロイしてください。
+
+```bash
+supabase functions deploy submit-basic-info
+supabase functions deploy get-next-question
+supabase functions deploy submit-survey
+supabase functions deploy admin-export-csv
+supabase functions deploy backup-export-csv
+```
+
+(`admin-export-csv`/`backup-export-csv`はCSVエクスポートに新しい列を含めるための再デプロイです。)
 
 ---
 
