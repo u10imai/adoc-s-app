@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
 
     const { data: subject, error: subjectError } = await supabase
       .from("subjects")
-      .select("age_group")
+      .select("age_group, child_difficulty_rating")
       .eq("id", subjectId)
       .maybeSingle();
     if (subjectError) throw subjectError;
@@ -78,7 +78,12 @@ Deno.serve(async (req) => {
     const answeredCount = total - unanswered.length;
 
     if (unanswered.length === 0) {
-      return jsonResponse({ ok: true, done: true, progress: { answered: answeredCount, total } });
+      return jsonResponse({
+        ok: true,
+        done: true,
+        progress: { answered: answeredCount, total },
+        survey_completed: subject.child_difficulty_rating !== null,
+      });
     }
 
     const picked = unanswered[Math.floor(Math.random() * unanswered.length)];

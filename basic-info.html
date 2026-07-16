@@ -16,15 +16,32 @@
 
     <form @submit.prevent="onSubmit">
       <div class="field">
-        <label for="age_months">月齢(わかる場合のみ、任意)</label>
+        <label for="examiner_type">検査者</label>
+        <select id="examiner_type" v-model="examinerType" :disabled="loading">
+          <option value="" disabled>選択してください</option>
+          <option value="保護者">保護者</option>
+          <option value="研究者">研究者</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="exam_date">検査日</label>
         <input
-          id="age_months"
-          type="number"
-          min="0"
-          max="300"
-          v-model="ageMonths"
+          id="exam_date"
+          type="date"
+          v-model="examDate"
           :disabled="loading"
-          placeholder="例: 54"
+        />
+      </div>
+
+      <div class="field">
+        <label for="birth_date">生年月日(わかる場合のみ、任意)</label>
+        <input
+          id="birth_date"
+          type="date"
+          v-model="birthDate"
+          :disabled="loading"
         />
         <div class="hint">わからない場合は空欄のままで構いません</div>
       </div>
@@ -50,16 +67,6 @@
         <textarea id="diagnosis_note" v-model="diagnosisNote" :disabled="loading"></textarea>
       </div>
 
-      <div class="field">
-        <label for="examiner_type">検査者区分</label>
-        <select id="examiner_type" v-model="examinerType" :disabled="loading">
-          <option value="" disabled>選択してください</option>
-          <option value="保護者">保護者</option>
-          <option value="研究者">研究者</option>
-          <option value="その他">その他</option>
-        </select>
-      </div>
-
       <div class="btn-row">
         <button type="submit" class="btn-primary" :disabled="loading || !canSubmit">
           {{ loading ? '保存中…' : '次へ進む' }}
@@ -81,11 +88,12 @@ createApp({
   data() {
     return {
       grades: ["年少", "年中", "年長", "小学校1年", "小学校2年", "小学校3年", "小学校4年", "小学校5年", "小学校6年", "中学生"],
-      ageMonths: "",
+      examinerType: "",
+      examDate: new Date().toISOString().slice(0, 10),
+      birthDate: "",
       grade: "",
       hasDiagnosis: "",
       diagnosisNote: "",
-      examinerType: "",
       loading: false,
       errorMessage: "",
       session: null,
@@ -93,7 +101,7 @@ createApp({
   },
   computed: {
     canSubmit() {
-      return Boolean(this.grade) && Boolean(this.hasDiagnosis) && Boolean(this.examinerType);
+      return Boolean(this.examinerType) && Boolean(this.examDate) && Boolean(this.grade) && Boolean(this.hasDiagnosis);
     },
   },
   mounted() {
@@ -108,11 +116,12 @@ createApp({
       const result = await Api.callFunction("submit-basic-info", {
         token: this.session.token,
         body: {
-          age_months: this.ageMonths === "" ? null : Number(this.ageMonths),
+          examiner_type: this.examinerType,
+          exam_date: this.examDate,
+          birth_date: this.birthDate === "" ? null : this.birthDate,
           grade: this.grade,
           has_diagnosis: this.hasDiagnosis === "yes",
           diagnosis_note: this.diagnosisNote,
-          examiner_type: this.examinerType,
         },
       });
 

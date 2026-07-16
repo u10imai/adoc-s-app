@@ -10,7 +10,39 @@
 <div id="app" class="page">
   <div class="card card--wide">
     <template v-if="done">
-      <h1>これで終了です。お疲れ様でした。</h1>
+      <template v-if="showSurvey">
+        <h1>アンケートにご協力ください</h1>
+        <p class="lead">最後に2つだけ質問があります</p>
+
+        <div v-if="surveyErrorMessage" class="alert alert-error">{{ surveyErrorMessage }}</div>
+
+        <div class="field">
+          <label>お子さんに聞いてください:今日のクイズは簡単でしたか、難しかったですか</label>
+          <div class="radio-group">
+            <label v-for="opt in difficultyOptions" :key="opt">
+              <input type="radio" :value="opt" v-model="childDifficultyRating" :disabled="surveySubmitting" /> {{ opt }}
+            </label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>保護者・検査者の方へ:お子さんはどれくらい理解できていたと思いますか</label>
+          <div class="radio-group">
+            <label v-for="opt in comprehensionOptions" :key="opt">
+              <input type="radio" :value="opt" v-model="caregiverComprehensionRating" :disabled="surveySubmitting" /> {{ opt }}
+            </label>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button type="button" class="btn-primary" :disabled="surveySubmitting || !canSubmitSurvey" @click="onSubmitSurvey">
+            {{ surveySubmitting ? '送信中…' : '送信する' }}
+          </button>
+        </div>
+      </template>
+      <template v-else>
+        <h1>これで終了です。お疲れ様でした。</h1>
+      </template>
     </template>
     <template v-else>
       <div v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
@@ -87,6 +119,16 @@ createApp({
       verbalResponse: "",
       progress: { answered: 0, total: 0 },
       imageErrorMessage: "",
+      surveyCompleted: false,
+      childDifficultyRating: "",
+      caregiverComprehensionRating: "",
+      surveySubmitting: false,
+      surveyErrorMessage: "",
+      difficultyOptions: ["とても簡単だった", "簡単だった", "普通", "難しかった", "とても難しかった"],
+      comprehensionOptions: [
+        "とても理解できていたと思う", "理解できていたと思う", "まあまあ理解できたと思う",
+        "あまり理解できていなかったと思う", "全く理解できていなかったと思う",
+      ],
     };
   },
   computed: {
@@ -95,6 +137,12 @@ createApp({
     },
     canSubmit() {
       return Boolean(this.verbalResponse.trim()) || Boolean(this.selectedChoice);
+    },
+    showSurvey() {
+      return this.done && !this.surveyCompleted;
+    },
+    canSubmitSurvey() {
+      return Boolean(this.childDifficultyRating) && Boolean(this.caregiverComprehensionRating);
     },
   },
   mounted() {
@@ -137,6 +185,7 @@ createApp({
 
       if (result.data.done) {
         this.done = true;
+        this.surveyCompleted = Boolean(result.data.survey_completed);
         return;
       }
 
@@ -189,6 +238,32 @@ createApp({
       }
       Session.clear();
       window.location.href = "login.html";
+    },
+    async onSubmitSurvey() {
+      if (this.surveySubmitting || !this.canSubmitSurvey) return;
+      this.surveySubmitting = true;
+      this.surveyErrorMessage = "";
+
+      const result = await Api.callFunction("submit-survey", {
+        token: this.session.token,
+        body: {
+          child_difficulty_rating: this.childDifficultyRating,
+          caregiver_comprehension_rating: this.caregiverComprehensionRating,
+        },
+      });
+
+      this.surveySubmitting = false;
+
+      if (!result.ok) {
+        this.surveyErrorMessage = result.message;
+        if (result.status === 401) {
+          Session.clear();
+          setTimeout(() => { window.location.href = "login.html"; }, 1500);
+        }
+        return;
+      }
+
+      this.surveyCompleted = true;
     },
   },
 }).mount("#app");

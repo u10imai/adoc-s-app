@@ -6,8 +6,9 @@ import { getSupabaseAdmin } from "./supabaseAdmin.ts";
 type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
 
 export const SUBJECT_COLUMNS = [
-  "subject_code", "age_months", "grade", "age_group",
-  "has_diagnosis", "diagnosis_note", "examiner_type", "basic_info_completed", "created_at",
+  "subject_code", "examiner_type", "exam_date", "birth_date", "age_months", "grade", "age_group",
+  "has_diagnosis", "diagnosis_note", "basic_info_completed",
+  "child_difficulty_rating", "caregiver_comprehension_rating", "created_at",
 ];
 
 export const RESPONSE_COLUMNS = [
@@ -25,7 +26,11 @@ function first<T>(v: T | T[] | null): T | null {
 export async function fetchSubjectsCsv(supabase: SupabaseAdminClient): Promise<string> {
   const { data, error } = await supabase
     .from("subjects")
-    .select("subject_code, age_months, grade, age_group, has_diagnosis, diagnosis_note, examiner_type, basic_info_completed, created_at")
+    .select(`
+      subject_code, examiner_type, exam_date, birth_date, age_months, grade, age_group,
+      has_diagnosis, diagnosis_note, basic_info_completed,
+      child_difficulty_rating, caregiver_comprehension_rating, created_at
+    `)
     .order("subject_code", { ascending: true });
   if (error) throw error;
 
