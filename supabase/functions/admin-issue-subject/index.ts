@@ -45,10 +45,24 @@ Deno.serve(async (req) => {
     return jsonResponse({ ok: false, message: MESSAGES.SESSION_EXPIRED }, 401);
   }
 
+  let subjectType = "";
+  try {
+    const body = await req.json();
+    subjectType = String(body.subject_type ?? "");
+  } catch {
+    return jsonResponse({ ok: false, message: MESSAGES.NETWORK_ERROR }, 400);
+  }
+
+  if (subjectType !== "本番" && subjectType !== "テスト") {
+    return jsonResponse({ ok: false, message: MESSAGES.NETWORK_ERROR }, 400);
+  }
+
   try {
     const supabase = getSupabaseAdmin();
 
-    const { data: subjectCode, error: rpcError } = await supabase.rpc("next_subject_code");
+    const { data: subjectCode, error: rpcError } = await supabase.rpc(
+      subjectType === "本番" ? "next_subject_code" : "next_test_subject_code",
+    );
     if (rpcError) throw rpcError;
 
     const password = generatePassword();
@@ -56,7 +70,12 @@ Deno.serve(async (req) => {
 
     const { error: insertError } = await supabase
       .from("subjects")
-      .insert({ subject_code: subjectCode, password_hash: passwordHash });
+      .insert({
+        subject_code: subjectCode,
+        password_hash: passwordHash,
+        password_plain: password,
+        subject_type: subjectType,
+      });
     if (insertError) throw insertError;
 
     return jsonResponse({ ok: true, subject_code: subjectCode, password });

@@ -6,7 +6,7 @@ import { getSupabaseAdmin } from "./supabaseAdmin.ts";
 type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
 
 export const SUBJECT_COLUMNS = [
-  "subject_code", "examiner_type", "exam_date", "birth_date", "age_months", "grade", "age_group",
+  "subject_code", "subject_type", "examiner_type", "exam_date", "birth_date", "age_months", "grade", "age_group",
   "has_diagnosis", "diagnosis_note", "basic_info_completed",
   "child_difficulty_rating", "caregiver_comprehension_rating", "created_at",
 ];
@@ -27,7 +27,7 @@ export async function fetchSubjectsCsv(supabase: SupabaseAdminClient): Promise<s
   const { data, error } = await supabase
     .from("subjects")
     .select(`
-      subject_code, examiner_type, exam_date, birth_date, age_months, grade, age_group,
+      subject_code, subject_type, examiner_type, exam_date, birth_date, age_months, grade, age_group,
       has_diagnosis, diagnosis_note, basic_info_completed,
       child_difficulty_rating, caregiver_comprehension_rating, created_at
     `)

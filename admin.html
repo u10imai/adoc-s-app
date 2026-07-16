@@ -25,6 +25,15 @@
     <!-- ID発行 -->
     <section v-if="activeTab === 'issue'">
       <p>新しい被験者IDとパスワードを発行します。</p>
+
+      <div class="field">
+        <label>区分</label>
+        <div class="radio-group">
+          <label><input type="radio" value="本番" v-model="issueType" :disabled="issuing" /> 本番(001番台)</label>
+          <label><input type="radio" value="テスト" v-model="issueType" :disabled="issuing" /> テスト(201番台)</label>
+        </div>
+      </div>
+
       <div class="btn-row">
         <button type="button" class="btn-primary" :disabled="issuing" @click="issueSubject">
           {{ issuing ? '発行中…' : '新規発行' }}
@@ -36,6 +45,36 @@
         <p>ID: <span class="value">{{ issuedSubject.subject_code }}</span></p>
         <p>パスワード: <span class="value" @click="copyPassword">{{ issuedSubject.password }}</span></p>
         <p v-if="copyState">{{ copyState }}</p>
+      </div>
+
+      <h2>発行済み一覧</h2>
+      <div class="btn-row">
+        <button type="button" class="btn-secondary btn-small" :disabled="progressLoading" @click="loadProgress">
+          {{ progressLoading ? '更新中…' : '更新' }}
+        </button>
+      </div>
+      <div v-if="progressLoading && !progressLoaded" class="spinner-text">読み込み中…</div>
+      <div class="data-table-wrap" v-if="progressLoaded">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>区分</th>
+              <th>パスワード</th>
+              <th>基本情報</th>
+              <th>発行日時</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="s in progressList" :key="s.subject_code">
+              <td>{{ s.subject_code }}</td>
+              <td>{{ s.subject_type }}</td>
+              <td>{{ s.password }}</td>
+              <td>{{ s.basic_info_completed ? '完了' : '未完了' }}</td>
+              <td>{{ s.created_at }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
 
@@ -213,6 +252,7 @@ createApp({
       activeTab: "issue",
       errorMessage: "",
 
+      issueType: "本番",
       issuing: false,
       issuedSubject: null,
       copyState: "",
@@ -238,12 +278,14 @@ createApp({
   },
   mounted() {
     this.admin = AdminSession.requireLoginOrRedirect();
+    if (!this.admin) return;
+    this.loadProgress();
   },
   methods: {
     switchTab(tab) {
       this.activeTab = tab;
       this.errorMessage = "";
-      if (tab === "progress" && !this.progressLoaded) this.loadProgress();
+      if ((tab === "issue" || tab === "progress") && !this.progressLoaded) this.loadProgress();
       if (tab === "score" && !this.scoreSummaryLoaded) this.loadScoreSummary();
       if (tab === "errors" && !this.errorLogsLoaded) this.loadErrorLogs();
     },
@@ -259,7 +301,10 @@ createApp({
       this.errorMessage = "";
       this.copyState = "";
 
-      const result = await Api.callFunction("admin-issue-subject", { token: this.admin.token });
+      const result = await Api.callFunction("admin-issue-subject", {
+        token: this.admin.token,
+        body: { subject_type: this.issueType },
+      });
 
       this.issuing = false;
 
@@ -270,7 +315,7 @@ createApp({
       }
 
       this.issuedSubject = { subject_code: result.data.subject_code, password: result.data.password };
-      this.progressLoaded = false;
+      await this.loadProgress();
     },
     copyPassword() {
       if (!this.issuedSubject) return;

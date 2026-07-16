@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
 
     const [{ data: subjects, error: subjectsError }, { data: illustrations, error: illError }, { data: responses, error: respError }] =
       await Promise.all([
-        supabase.from("subjects").select("id, subject_code, age_group, basic_info_completed, created_at"),
+        supabase.from("subjects").select("id, subject_code, subject_type, password_plain, age_group, basic_info_completed, created_at"),
         supabase.from("illustrations").select("age_group"),
         supabase.from("responses").select("subject_id"),
       ]);
@@ -62,6 +62,8 @@ Deno.serve(async (req) => {
 
     const list = (subjects ?? []).map((s) => ({
       subject_code: s.subject_code,
+      subject_type: s.subject_type,
+      password: s.password_plain,
       age_group: s.age_group,
       basic_info_completed: s.basic_info_completed,
       created_at: formatJst(s.created_at),
