@@ -4,3 +4,5 @@ node_modules/
 .env
 .env.local
 supabase/.temp/
+cloudinary-illustrations.csv
+illustrations-insert.sql
