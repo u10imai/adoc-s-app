@@ -18,7 +18,7 @@
 
         <div class="field">
           <label>お子さんに聞いてください:今日のクイズは簡単でしたか、難しかったですか</label>
-          <div class="radio-group">
+          <div class="radio-group radio-group--scale">
             <label v-for="opt in difficultyOptions" :key="opt">
               <input type="radio" :value="opt" v-model="childDifficultyRating" :disabled="surveySubmitting" /> {{ opt }}
             </label>
@@ -27,7 +27,7 @@
 
         <div class="field">
           <label>保護者・検査者の方へ:お子さんはどれくらい理解できていたと思いますか</label>
-          <div class="radio-group">
+          <div class="radio-group radio-group--scale">
             <label v-for="opt in comprehensionOptions" :key="opt">
               <input type="radio" :value="opt" v-model="caregiverComprehensionRating" :disabled="surveySubmitting" /> {{ opt }}
             </label>

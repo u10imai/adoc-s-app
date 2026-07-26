@@ -114,6 +114,12 @@ input:focus, select:focus, textarea:focus {
   flex-wrap: wrap;
 }
 
+.radio-group--scale {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
 .radio-group label {
   display: flex;
   align-items: center;
