@@ -5,7 +5,13 @@ import { logErrorToDb } from "../_shared/errorLog.ts";
 import { MESSAGES } from "../_shared/messages.ts";
 import { formatJst } from "../_shared/datetime.ts";
 
-const VALID_SCORES = ["正解", "不正解", "未評価"];
+const VALID_SCORES = [
+  "未評価",
+  "1. 正解:正答",
+  "2. 正解:文脈関連回答",
+  "3. 不正解:特定の視覚要素への言及",
+  "4. 不正解:無関連回答_不正解",
+];
 
 Deno.serve(async (req) => {
   const preflight = handleOptions(req);

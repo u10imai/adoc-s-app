@@ -176,8 +176,10 @@
                 <td>
                   <select v-model="row.draftScore" :disabled="savingRowId === row.id">
                     <option value="未評価">未評価</option>
-                    <option value="正解">正解</option>
-                    <option value="不正解">不正解</option>
+                    <option value="1. 正解:正答">1. 正解:正答</option>
+                    <option value="2. 正解:文脈関連回答">2. 正解:文脈関連回答</option>
+                    <option value="3. 不正解:特定の視覚要素への言及">3. 不正解:特定の視覚要素への言及</option>
+                    <option value="4. 不正解:無関連回答_不正解">4. 不正解:無関連回答_不正解</option>
                   </select>
                 </td>
                 <td>{{ row.human_scorer || '-' }}</td>
