@@ -1,8 +1,8 @@
-name: Weekly CSV Backup to Google Drive
+name: Daily CSV Backup to Google Drive
 
 on:
   schedule:
-    - cron: "0 22 * * 0" # UTC Sun 22:00 = JST Mon 07:00
+    - cron: "0 22 * * *" # UTC 22:00 = JST 翌07:00(毎日)
   workflow_dispatch: {}
 
 permissions:

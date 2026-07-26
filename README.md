@@ -327,14 +327,14 @@ supabase functions deploy admin-export-csv
 ### 7. ワークフローファイルについて
 
 - `.github/workflows/keep-alive.yml`: 毎日2回(JST 9:00 / 21:00)、`health-check`にリクエストを送るだけのシンプルなワークフローです。
-- `.github/workflows/weekly-backup.yml`: 毎週月曜7:00(JST)に、`backup-export-csv`からsubjects/responses両方のCSVを取得し、Google Driveにアップロードします。
+- `.github/workflows/daily-backup.yml`: 毎日7:00(JST)に、`backup-export-csv`からsubjects/responses両方のCSVを取得し、Google Driveにアップロードします。
 
 どちらも`workflow_dispatch`が有効なので、GitHubリポジトリの「Actions」タブから手動実行できます。このリポジトリをGitHubにpushし、上記のSecretsを登録した後で動作確認してください。
 
 ### 8. 動作確認する
 
 1. GitHubの「Actions」タブから `Supabase Keep-Alive` を「Run workflow」で手動実行し、成功(緑のチェック)になること
-2. 同様に `Weekly CSV Backup to Google Drive` を手動実行し、成功になること
+2. 同様に `Daily CSV Backup to Google Drive` を手動実行し、成功になること
 3. 手順2で作成したGoogle Driveフォルダに `subjects_YYYY-MM-DD.csv` / `responses_YYYY-MM-DD.csv` が作成されており、Excel等で開いて日本語が文字化けしないこと
 4. わざと間違った値で`backup-export-csv`を直接curlで叩き、401が返ってくること(例: `curl -X POST <FUNCTIONS_BASE_URL>/backup-export-csv -H "X-Backup-Secret: wrong" -d '{"table":"subjects"}'`)
 5. ④の「CSVエクスポート」(`admin-export-csv`)が引き続き正常動作すること(リファクタの回帰確認)
@@ -348,7 +348,7 @@ supabase functions deploy admin-export-csv
 
 1. GitHub Secrets(`BACKUP_EXPORT_SECRET` / `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` / `GOOGLE_OAUTH_REFRESH_TOKEN` / `GDRIVE_FOLDER_ID`)をSettings → Secrets and variables → Actionsから削除する
 2. `supabase secrets unset BACKUP_EXPORT_SECRET` を実行する
-3. `.github/workflows/keep-alive.yml` / `weekly-backup.yml` を削除するか、Actionsタブから個別に「Disable workflow」する(定期実行だけ止めたい場合は各ファイルの`schedule:`の行を削除し`workflow_dispatch`だけ残す方法もあります)
+3. `.github/workflows/keep-alive.yml` / `daily-backup.yml` を削除するか、Actionsタブから個別に「Disable workflow」する(定期実行だけ止めたい場合は各ファイルの`schedule:`の行を削除し`workflow_dispatch`だけ残す方法もあります)
 4. Google Cloud Console → APIとサービス → 認証情報 から、作成したOAuthクライアントIDを削除する。本研究専用のGCPプロジェクトであれば、プロジェクトごと削除しても構いません
 5. Google Driveのバックアップフォルダ(自分のアカウントの通常フォルダ)は、不要であれば削除する
 
