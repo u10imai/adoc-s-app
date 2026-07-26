@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
       .select(`
         id, verbal_response, used_choices, presented_choices, selected_choice_label, recorded_at,
         human_score, human_scorer, human_scored_at,
-        illustrations ( image_url, correct_label, age_group )
+        illustrations ( image_url, correct_label, age_group, description )
       `)
       .eq("subject_id", subjectId)
       .order("recorded_at", { ascending: true });

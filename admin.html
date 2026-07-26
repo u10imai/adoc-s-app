@@ -158,6 +158,7 @@
               <tr>
                 <th>イラスト</th>
                 <th>正解</th>
+                <th>詳細説明</th>
                 <th>発話内容</th>
                 <th>選択肢回答</th>
                 <th>採点</th>
@@ -169,6 +170,7 @@
               <tr v-for="row in scoreRows" :key="row.id" :class="{ 'row-scored': row.human_score !== '未評価' }">
                 <td><img :src="row.illustration?.image_url" alt="イラスト" class="thumb" /></td>
                 <td>{{ row.illustration?.correct_label }}</td>
+                <td>{{ row.illustration?.description || '-' }}</td>
                 <td>{{ row.verbal_response || '-' }}</td>
                 <td>{{ row.used_choices ? (row.selected_choice_label || '(未選択)') : '-' }}</td>
                 <td>
