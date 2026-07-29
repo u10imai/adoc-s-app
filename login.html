@@ -91,6 +91,8 @@ createApp({
 
       if (result.data.is_first_login) {
         window.location.href = "basic-info.html";
+      } else if (result.data.needs_intro) {
+        window.location.href = "intro.html";
       } else {
         window.location.href = "assessment.html";
       }

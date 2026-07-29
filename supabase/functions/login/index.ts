@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
 
     const { data: subject, error: subjectError } = await supabase
       .from("subjects")
-      .select("id, subject_code, password_hash, age_group, basic_info_completed")
+      .select("id, subject_code, password_hash, age_group, basic_info_completed, intro_agreed")
       .eq("subject_code", subjectCode)
       .maybeSingle();
 
@@ -59,6 +59,7 @@ Deno.serve(async (req) => {
       token,
       subject_code: subject.subject_code,
       is_first_login: !subject.basic_info_completed,
+      needs_intro: !subject.intro_agreed,
       age_group: subject.age_group,
     });
   } catch (e) {

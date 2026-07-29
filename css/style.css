@@ -193,6 +193,45 @@ button:disabled {
   font-weight: 600;
 }
 
+.question-prompt {
+  text-align: center;
+  font-size: 1rem;
+  margin: 0 0 16px;
+}
+
+.question-prompt--practice {
+  color: var(--color-primary);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.hint-inline {
+  font-weight: normal;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.textarea-compact {
+  min-height: 56px;
+}
+
+.examiner-note {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  margin-top: 12px;
+}
+
+.intro-text {
+  margin: 0 0 12px;
+}
+
+.intro-question {
+  text-align: center;
+  font-weight: 600;
+  font-size: 1.15rem;
+  margin: 24px 0 0;
+}
+
 .illustration-wrap {
   display: flex;
   justify-content: center;

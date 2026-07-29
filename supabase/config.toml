@@ -10,6 +10,9 @@ verify_jwt = false
 [functions.submit-basic-info]
 verify_jwt = false
 
+[functions.submit-intro-agreement]
+verify_jwt = false
+
 [functions.log-error]
 verify_jwt = false
 

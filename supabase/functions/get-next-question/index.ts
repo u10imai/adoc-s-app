@@ -5,8 +5,7 @@ import { logErrorToDb } from "../_shared/errorLog.ts";
 import { MESSAGES } from "../_shared/messages.ts";
 import { cumulativeAgeGroups, type AgeGroup } from "../_shared/ageGroup.ts";
 
-const DUMMY_MIN = 2;
-const DUMMY_MAX = 3;
+const DUMMY_COUNT = 2;
 
 function shuffle<T>(arr: T[]): T[] {
   const copy = [...arr];
@@ -91,11 +90,10 @@ Deno.serve(async (req) => {
     const sameGroupPool = allIllustrations.filter(
       (i) => i.age_group === picked.age_group && i.id !== picked.id,
     );
-    const dummyPool = sameGroupPool.length >= DUMMY_MIN
+    const dummyPool = sameGroupPool.length >= DUMMY_COUNT
       ? sameGroupPool
       : allIllustrations.filter((i) => i.id !== picked.id);
-    const desiredDummyCount = Math.random() < 0.5 ? DUMMY_MIN : DUMMY_MAX;
-    const dummyCount = Math.min(desiredDummyCount, dummyPool.length);
+    const dummyCount = Math.min(DUMMY_COUNT, dummyPool.length);
     const dummies = shuffle(dummyPool).slice(0, dummyCount).map((i) => i.correct_label);
     const choices = shuffle([picked.correct_label, ...dummies]);
 

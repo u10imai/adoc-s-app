@@ -50,7 +50,10 @@
       <div v-if="loading" class="spinner-text">読み込み中…</div>
 
       <template v-else-if="illustration">
-        <div class="progress">{{ progressText }}</div>
+        <div class="progress">{{ practiceMode ? '練習' : progressText }}</div>
+
+        <p v-if="practiceMode" class="question-prompt question-prompt--practice">まずは1回、練習してみましょう。</p>
+        <p class="question-prompt">下のイラストは何をしているところですか。また、何を表していると思いますか?</p>
 
         <div class="illustration-wrap">
           <img :src="illustration.image_url" alt="イラスト" @error="onImageError" />
@@ -58,9 +61,10 @@
         <div v-if="imageErrorMessage" class="alert alert-error">{{ imageErrorMessage }}</div>
 
         <div class="field">
-          <label for="verbal_response">発話内容</label>
+          <label for="verbal_response">発話 <span class="hint-inline">(イラストに関する回答のみ記入してください)</span></label>
           <textarea
             id="verbal_response"
+            class="textarea-compact"
             v-model="verbalResponse"
             :disabled="submitting || showChoices"
           ></textarea>
@@ -72,20 +76,29 @@
           </button>
         </div>
 
-        <div class="choice-grid" v-if="showChoices">
-          <button
-            v-for="c in choices"
-            :key="c"
-            type="button"
-            :class="{ selected: selectedChoice === c }"
-            :disabled="submitting"
-            @click="selectChoice(c)"
-          >{{ c }}</button>
-        </div>
+        <template v-if="showChoices">
+          <div class="choice-grid">
+            <button
+              v-for="c in choices"
+              :key="c"
+              type="button"
+              :class="{ selected: selectedChoice === c }"
+              :disabled="submitting"
+              @click="selectChoice(c)"
+            >{{ c }}</button>
+            <button
+              type="button"
+              :class="{ selected: selectedChoice === UNKNOWN_LABEL }"
+              :disabled="submitting"
+              @click="selectChoice(UNKNOWN_LABEL)"
+            >{{ UNKNOWN_LABEL }}</button>
+          </div>
+          <p class="examiner-note">検査者の方へ:選択肢を読みあげてください。意味が変わらない範囲でわかりやすいように言い換えてもらって構いません。</p>
+        </template>
 
         <div class="btn-row">
           <button type="button" class="btn-primary" :disabled="submitting || !canSubmit" @click="onNext">
-            {{ submitting ? '保存中…' : '次へ' }}
+            {{ submitting ? '保存中…' : (practiceMode ? '練習を終える' : '次へ') }}
           </button>
           <button type="button" class="btn-secondary" :disabled="submitting" @click="onStopForToday">
             今日はここまで
@@ -104,6 +117,15 @@
 <script>
 const { createApp } = Vue;
 
+// 練習用のダミー設問。全年齢層で共通、最初の1問(累計回答0件)の前に必ず1回だけ表示する。
+const PRACTICE_ILLUSTRATION = {
+  id: "practice",
+  image_url: "img/practice-phone.jpg",
+};
+const PRACTICE_CHOICES = ["電話", "食事", "着替え"];
+
+const UNKNOWN_LABEL = "わからない";
+
 createApp({
   data() {
     return {
@@ -119,6 +141,10 @@ createApp({
       verbalResponse: "",
       progress: { answered: 0, total: 0 },
       imageErrorMessage: "",
+      practiceMode: false,
+      practiceDone: false,
+      pendingReal: null,
+      UNKNOWN_LABEL,
       surveyCompleted: false,
       childDifficultyRating: "",
       caregiverComprehensionRating: "",
@@ -189,6 +215,15 @@ createApp({
         return;
       }
 
+      if (this.progress.answered === 0 && !this.practiceDone) {
+        this.practiceMode = true;
+        this.illustration = PRACTICE_ILLUSTRATION;
+        this.choices = PRACTICE_CHOICES;
+        this.pendingReal = { illustration: result.data.illustration, choices: result.data.choices };
+        return;
+      }
+
+      this.practiceMode = false;
       this.illustration = result.data.illustration;
       this.choices = result.data.choices;
     },
@@ -203,6 +238,20 @@ createApp({
     },
     async onNext() {
       if (this.submitting || !this.canSubmit) return;
+
+      if (this.practiceMode) {
+        this.practiceDone = true;
+        this.practiceMode = false;
+        this.illustration = this.pendingReal.illustration;
+        this.choices = this.pendingReal.choices;
+        this.pendingReal = null;
+        this.showChoices = false;
+        this.selectedChoice = null;
+        this.verbalResponse = "";
+        this.imageErrorMessage = "";
+        return;
+      }
+
       this.submitting = true;
       this.errorMessage = "";
 
@@ -212,7 +261,7 @@ createApp({
           illustration_id: this.illustration.id,
           verbal_response: this.verbalResponse,
           used_choices: this.showChoices,
-          presented_choices: this.showChoices ? this.choices : null,
+          presented_choices: this.showChoices ? [...this.choices, UNKNOWN_LABEL] : null,
           selected_choice_label: this.selectedChoice,
         },
       });

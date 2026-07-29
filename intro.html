@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>クイズの説明 | ADOC-S 研究アプリ</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div id="app" class="page">
+  <div class="card">
+    <template v-if="declined">
+      <h1>また今度お話ししましょう</h1>
+      <p class="lead">もう一度、大人の人とよく話してください</p>
+    </template>
+    <template v-else>
+      <h1>クイズの説明</h1>
+
+      <div v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
+
+      <p class="intro-text">これは絵をみて、その絵が「何をしているところか」「何を表しているか」を答えるクイズです。</p>
+      <p class="intro-text">わたしたちは、この絵を使って、たくさんのこどもたちが、自分のやりたいことを、大人に上手に伝えられるようになるための道具を作っています。</p>
+      <p class="intro-text">わからなくても、ヒントが出てくるので安心してください。</p>
+      <p class="intro-text">ヒントを見てもわからないときは、「わからない」と答えてください。</p>
+      <p class="intro-text">つかれたときは、言ってください。休憩しましょう。</p>
+
+      <p class="intro-question">いっしょにやってくれますか?</p>
+
+      <div class="btn-row">
+        <button type="button" class="btn-primary" :disabled="loading" @click="onAgree">
+          {{ loading ? "すすめています…" : "はい" }}
+        </button>
+        <button type="button" class="btn-secondary" :disabled="loading" @click="onDecline">
+          今日はここまで
+        </button>
+      </div>
+    </template>
+  </div>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="js/config.js"></script>
+<script src="js/messages.js"></script>
+<script src="js/session.js"></script>
+<script src="js/api.js"></script>
+<script>
+const { createApp } = Vue;
+
+createApp({
+  data() {
+    return {
+      session: null,
+      loading: false,
+      errorMessage: "",
+      declined: false,
+    };
+  },
+  mounted() {
+    this.session = Session.requireLoginOrRedirect();
+  },
+  methods: {
+    async onAgree() {
+      if (this.loading || !this.session) return;
+      this.loading = true;
+      this.errorMessage = "";
+
+      const result = await Api.callFunction("submit-intro-agreement", {
+        token: this.session.token,
+      });
+
+      this.loading = false;
+
+      if (!result.ok) {
+        this.errorMessage = result.message;
+        if (result.status === 401) {
+          Session.clear();
+          setTimeout(() => { window.location.href = "login.html"; }, 1500);
+        }
+        return;
+      }
+
+      window.location.href = "assessment.html";
+    },
+    onDecline() {
+      this.declined = true;
+      Session.clear();
+      setTimeout(() => { window.location.href = "login.html"; }, 2500);
+    },
+  },
+}).mount("#app");
+</script>
+</body>
+</html>
