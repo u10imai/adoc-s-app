@@ -6,6 +6,9 @@ import { MESSAGES } from "../_shared/messages.ts";
 import { gradeToAgeGroup } from "../_shared/ageGroup.ts";
 
 const EXAMINER_TYPES = ["保護者", "研究者", "その他"];
+const GENDERS = ["男", "女"];
+const DIAGNOSIS_STATUSES = ["none", "current", "past"];
+const GUARDIAN_PROFESSIONS = ["作業療法士", "理学療法士", "言語聴覚士", "心理士", "社会福祉士", "その他"];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 // 生年月日と検査日から、満月齢(切り捨て)を計算する。
@@ -47,9 +50,11 @@ Deno.serve(async (req) => {
   let examinerType = "";
   let examDate = "";
   let birthDate: string | null = null;
+  let gender = "";
   let grade = "";
-  let hasDiagnosis = false;
-  let diagnosisNote: string | null = null;
+  let diagnosisStatus = "";
+  let guardianProfession: string | null = null;
+  let guardianProfessionOther: string | null = null;
 
   try {
     const body = await req.json();
@@ -58,9 +63,13 @@ Deno.serve(async (req) => {
     birthDate = body.birth_date === "" || body.birth_date === null || body.birth_date === undefined
       ? null
       : String(body.birth_date);
+    gender = String(body.gender ?? "");
     grade = String(body.grade ?? "");
-    hasDiagnosis = Boolean(body.has_diagnosis);
-    diagnosisNote = hasDiagnosis ? String(body.diagnosis_note ?? "").trim() || null : null;
+    diagnosisStatus = String(body.diagnosis_status ?? "");
+    guardianProfession = examinerType === "保護者" ? String(body.guardian_profession ?? "") : null;
+    guardianProfessionOther = examinerType === "保護者" && guardianProfession === "その他"
+      ? String(body.guardian_profession_other ?? "").trim() || null
+      : null;
   } catch {
     return jsonResponse({ ok: false, message: MESSAGES.NETWORK_ERROR }, 400);
   }
@@ -72,6 +81,18 @@ Deno.serve(async (req) => {
 
   if (!EXAMINER_TYPES.includes(examinerType)) {
     return jsonResponse({ ok: false, message: "検査者の選択が正しくありません。もう一度お選びください。" }, 400);
+  }
+
+  if (!GENDERS.includes(gender)) {
+    return jsonResponse({ ok: false, message: "性別の選択が正しくありません。もう一度お選びください。" }, 400);
+  }
+
+  if (!DIAGNOSIS_STATUSES.includes(diagnosisStatus)) {
+    return jsonResponse({ ok: false, message: "個別の指導の受診状況の選択が正しくありません。もう一度お選びください。" }, 400);
+  }
+
+  if (examinerType === "保護者" && !GUARDIAN_PROFESSIONS.includes(guardianProfession ?? "")) {
+    return jsonResponse({ ok: false, message: "保護者の方の専門職属性の選択が正しくありません。もう一度お選びください。" }, 400);
   }
 
   if (!DATE_RE.test(examDate) || Number.isNaN(new Date(examDate).getTime())) {
@@ -99,10 +120,14 @@ Deno.serve(async (req) => {
         exam_date: examDate,
         birth_date: birthDate,
         age_months: ageMonths,
+        gender,
         grade,
         age_group: ageGroup,
-        has_diagnosis: hasDiagnosis,
-        diagnosis_note: diagnosisNote,
+        has_diagnosis: diagnosisStatus !== "none",
+        diagnosis_status: diagnosisStatus,
+        diagnosis_note: null,
+        guardian_profession: guardianProfession,
+        guardian_profession_other: guardianProfessionOther,
         basic_info_completed: true,
       })
       .eq("id", subjectId);

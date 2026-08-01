@@ -8,6 +8,8 @@
   --color-primary-dark: #1f5490;
   --color-danger-bg: #fdecea;
   --color-danger-text: #9c2b1f;
+  --color-danger: #c0392b;
+  --color-danger-dark: #a5301f;
   --color-border: #d8dce3;
   --radius: 14px;
   --color-scored-bg: #eef7ec;
@@ -162,6 +164,33 @@ button.btn-secondary {
   border: 1px solid var(--color-border);
 }
 
+button.btn-danger {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+button.btn-danger:hover:not(:disabled) {
+  background: var(--color-danger-dark);
+}
+
+.issue-panel {
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: 12px 0;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.issue-panel--test {
+  background: #eaf2fb;
+  border-color: var(--color-primary);
+}
+
+.issue-panel--production {
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger);
+}
+
 button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -230,6 +259,14 @@ button:disabled {
   font-weight: 600;
   font-size: 1.15rem;
   margin: 24px 0 0;
+}
+
+.intro-subheading {
+  font-weight: 600;
+  font-size: 1rem;
+  margin: 24px 0 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
 }
 
 .illustration-wrap {

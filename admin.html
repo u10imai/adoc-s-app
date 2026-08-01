@@ -26,18 +26,28 @@
     <section v-if="activeTab === 'issue'">
       <p>新しい被験者IDとパスワードを発行します。</p>
 
-      <div class="field">
-        <label>区分</label>
-        <div class="radio-group">
-          <label><input type="radio" value="本番" v-model="issueType" :disabled="issuing" /> 本番(001番台)</label>
-          <label><input type="radio" value="テスト" v-model="issueType" :disabled="issuing" /> テスト(201番台)</label>
+      <div
+        class="issue-panel"
+        :class="issueType === '本番' ? 'issue-panel--production' : 'issue-panel--test'"
+      >
+        <div class="field">
+          <label>区分</label>
+          <div class="radio-group">
+            <label><input type="radio" value="本番" v-model="issueType" :disabled="issuing" /> 本番(001番台)</label>
+            <label><input type="radio" value="テスト" v-model="issueType" :disabled="issuing" /> テスト(201番台)</label>
+          </div>
         </div>
-      </div>
 
-      <div class="btn-row">
-        <button type="button" class="btn-primary" :disabled="issuing" @click="issueSubject">
-          {{ issuing ? '発行中…' : '新規発行' }}
-        </button>
+        <div class="btn-row">
+          <button
+            type="button"
+            :class="issueType === '本番' ? 'btn-danger' : 'btn-primary'"
+            :disabled="issuing"
+            @click="issueSubject"
+          >
+            {{ issuing ? '発行中…' : (issueType === '本番' ? '本番用IDを発行' : 'テスト用IDを発行') }}
+          </button>
+        </div>
       </div>
 
       <div v-if="issuedSubject" class="credential-box">
@@ -256,7 +266,7 @@ createApp({
       activeTab: "issue",
       errorMessage: "",
 
-      issueType: "本番",
+      issueType: "テスト",
       issuing: false,
       issuedSubject: null,
       copyState: "",
@@ -301,6 +311,12 @@ createApp({
     },
     async issueSubject() {
       if (this.issuing) return;
+
+      if (this.issueType === "本番") {
+        const ok = window.confirm("本番用のIDを発行します。よろしいですか?(テスト目的の場合は「テスト」を選び直してください)");
+        if (!ok) return;
+      }
+
       this.issuing = true;
       this.errorMessage = "";
       this.copyState = "";

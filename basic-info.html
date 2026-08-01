@@ -25,6 +25,19 @@
         </select>
       </div>
 
+      <div class="field" v-if="examinerType === '保護者'">
+        <label for="guardian_profession">保護者の方の専門職属性</label>
+        <select id="guardian_profession" v-model="guardianProfession" :disabled="loading">
+          <option value="" disabled>選択してください</option>
+          <option v-for="p in guardianProfessions" :key="p" :value="p">{{ p }}</option>
+        </select>
+      </div>
+
+      <div class="field" v-if="examinerType === '保護者' && guardianProfession === 'その他'">
+        <label for="guardian_profession_other">差し支えない範囲でご記入ください</label>
+        <textarea id="guardian_profession_other" v-model="guardianProfessionOther" :disabled="loading"></textarea>
+      </div>
+
       <div class="field">
         <label for="exam_date">検査日</label>
         <input
@@ -47,6 +60,14 @@
       </div>
 
       <div class="field">
+        <label>性別</label>
+        <div class="radio-group">
+          <label><input type="radio" value="男" v-model="gender" :disabled="loading" /> 男</label>
+          <label><input type="radio" value="女" v-model="gender" :disabled="loading" /> 女</label>
+        </div>
+      </div>
+
+      <div class="field">
         <label for="grade">学年</label>
         <select id="grade" v-model="grade" :disabled="loading">
           <option value="" disabled>選択してください</option>
@@ -57,14 +78,10 @@
       <div class="field">
         <label>これまで、言語や運動の発達に関する個別の指導(言語療法や作業療法など)へ定期的に通った経験がありますか</label>
         <div class="radio-group">
-          <label><input type="radio" value="yes" v-model="hasDiagnosis" :disabled="loading" /> ある</label>
-          <label><input type="radio" value="no" v-model="hasDiagnosis" :disabled="loading" /> ない</label>
+          <label><input type="radio" value="none" v-model="diagnosisStatus" :disabled="loading" /> 受けていない</label>
+          <label><input type="radio" value="current" v-model="diagnosisStatus" :disabled="loading" /> 現在受けている</label>
+          <label><input type="radio" value="past" v-model="diagnosisStatus" :disabled="loading" /> 以前受けていた</label>
         </div>
-      </div>
-
-      <div class="field" v-if="hasDiagnosis === 'yes'">
-        <label for="diagnosis_note">差し支えない範囲でご記入ください</label>
-        <textarea id="diagnosis_note" v-model="diagnosisNote" :disabled="loading"></textarea>
       </div>
 
       <div class="btn-row">
@@ -88,12 +105,15 @@ createApp({
   data() {
     return {
       grades: ["年少", "年中", "年長", "小学校1年", "小学校2年", "小学校3年", "小学校4年", "小学校5年", "小学校6年", "中学生"],
+      guardianProfessions: ["作業療法士", "理学療法士", "言語聴覚士", "心理士", "社会福祉士", "その他"],
       examinerType: "",
+      guardianProfession: "",
+      guardianProfessionOther: "",
       examDate: new Date().toISOString().slice(0, 10),
       birthDate: "",
+      gender: "",
       grade: "",
-      hasDiagnosis: "",
-      diagnosisNote: "",
+      diagnosisStatus: "",
       loading: false,
       errorMessage: "",
       session: null,
@@ -101,7 +121,8 @@ createApp({
   },
   computed: {
     canSubmit() {
-      return Boolean(this.examinerType) && Boolean(this.examDate) && Boolean(this.grade) && Boolean(this.hasDiagnosis);
+      if (this.examinerType === "保護者" && !this.guardianProfession) return false;
+      return Boolean(this.examinerType) && Boolean(this.examDate) && Boolean(this.gender) && Boolean(this.grade) && Boolean(this.diagnosisStatus);
     },
   },
   mounted() {
@@ -117,11 +138,13 @@ createApp({
         token: this.session.token,
         body: {
           examiner_type: this.examinerType,
+          guardian_profession: this.examinerType === "保護者" ? this.guardianProfession : "",
+          guardian_profession_other: this.examinerType === "保護者" && this.guardianProfession === "その他" ? this.guardianProfessionOther : "",
           exam_date: this.examDate,
           birth_date: this.birthDate === "" ? null : this.birthDate,
+          gender: this.gender,
           grade: this.grade,
-          has_diagnosis: this.hasDiagnosis === "yes",
-          diagnosis_note: this.diagnosisNote,
+          diagnosis_status: this.diagnosisStatus,
         },
       });
 
