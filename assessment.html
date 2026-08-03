@@ -68,10 +68,11 @@
             v-model="verbalResponse"
             :disabled="submitting || showChoices"
           ></textarea>
+          <div class="hint">ヒントをみる(「わからない」を押す)場合は、ここを空欄に。</div>
         </div>
 
         <div class="btn-row" v-if="!showChoices">
-          <button type="button" class="btn-secondary" :disabled="submitting" @click="onDontKnow">
+          <button type="button" class="btn-secondary" :disabled="submitting || Boolean(verbalResponse.trim())" @click="onDontKnow">
             わからない
           </button>
         </div>
