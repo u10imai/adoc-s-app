@@ -199,6 +199,20 @@ supabase functions deploy backup-export-csv
 
 (`admin-export-csv`/`backup-export-csv`はCSVエクスポートに新しい列を含めるための再デプロイです。)
 
+### 4. 【追記】検査者「その他」の記入欄と、学年選択肢(中学1〜3年・高校1〜3年)を追加した際の手順
+
+検査者を「その他」にした場合に誰なのかを記入できる欄を追加し、学年選択を「中学生」の一括りから「中学1年/2年/3年」「高校1年/2年/3年」まで選べるように広げました(`age_group`の区分自体は変更していません)。
+
+`supabase/migrations/0016_add_examiner_type_other_and_expand_grades.sql`を①と同じ方法で適用し、以下を(再)デプロイしてください。
+
+```bash
+supabase functions deploy submit-basic-info
+supabase functions deploy admin-export-csv
+supabase functions deploy backup-export-csv
+```
+
+(`admin-export-csv`/`backup-export-csv`はCSVエクスポートに`examiner_type_other`列を含めるための再デプロイです。)
+
 ---
 
 ## ④管理者画面セットアップ手順(このステージで必要な作業)

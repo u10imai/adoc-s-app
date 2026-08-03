@@ -70,6 +70,10 @@ p.lead {
   margin: 0 0 24px;
 }
 
+p.lead.lead-left {
+  text-align: left;
+}
+
 .field {
   margin-bottom: 20px;
 }

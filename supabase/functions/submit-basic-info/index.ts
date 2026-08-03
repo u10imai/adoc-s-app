@@ -48,6 +48,7 @@ Deno.serve(async (req) => {
   const subjectId = payload.sub;
 
   let examinerType = "";
+  let examinerTypeOther: string | null = null;
   let examDate = "";
   let birthDate: string | null = null;
   let gender = "";
@@ -59,6 +60,9 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     examinerType = String(body.examiner_type ?? "");
+    examinerTypeOther = examinerType === "その他"
+      ? String(body.examiner_type_other ?? "").trim() || null
+      : null;
     examDate = String(body.exam_date ?? "");
     birthDate = body.birth_date === "" || body.birth_date === null || body.birth_date === undefined
       ? null
@@ -117,6 +121,7 @@ Deno.serve(async (req) => {
       .from("subjects")
       .update({
         examiner_type: examinerType,
+        examiner_type_other: examinerTypeOther,
         exam_date: examDate,
         birth_date: birthDate,
         age_months: ageMonths,

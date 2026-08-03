@@ -18,7 +18,12 @@ export const GRADES = [
   "小学校4年",
   "小学校5年",
   "小学校6年",
-  "中学生",
+  "中学1年",
+  "中学2年",
+  "中学3年",
+  "高校1年",
+  "高校2年",
+  "高校3年",
 ] as const;
 
 export type Grade = typeof GRADES[number];
@@ -33,7 +38,12 @@ const GRADE_TO_AGE_GROUP: Record<Grade, AgeGroup> = {
   "小学校4年": "小学校高学年",
   "小学校5年": "小学校高学年",
   "小学校6年": "小学校高学年",
-  "中学生": "中学生以上",
+  "中学1年": "中学生以上",
+  "中学2年": "中学生以上",
+  "中学3年": "中学生以上",
+  "高校1年": "中学生以上",
+  "高校2年": "中学生以上",
+  "高校3年": "中学生以上",
 };
 
 export function isValidGrade(grade: string): grade is Grade {

@@ -98,7 +98,7 @@
 
         <div class="btn-row">
           <button type="button" class="btn-primary" :disabled="submitting || !canSubmit" @click="onNext">
-            {{ submitting ? '保存中…' : (practiceMode ? '練習を終える' : '次へ') }}
+            {{ submitting ? '保存中…' : (practiceMode ? '練習を終えて本番へ' : '次へ') }}
           </button>
           <button type="button" class="btn-secondary" :disabled="submitting" @click="onStopForToday">
             今日はここまで

@@ -10,7 +10,7 @@
 <div id="app" class="page">
   <div class="card">
     <h1>基本情報の入力</h1>
-    <p class="lead">最初に一度だけ、対象のお子さまについて教えてください</p>
+    <p class="lead lead-left">最初にこちらを入力してください</p>
 
     <div v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
 
@@ -23,6 +23,11 @@
           <option value="研究者">研究者</option>
           <option value="その他">その他</option>
         </select>
+      </div>
+
+      <div class="field" v-if="examinerType === 'その他'">
+        <label for="examiner_type_other">差し支えない範囲でご記入ください</label>
+        <textarea id="examiner_type_other" v-model="examinerTypeOther" :disabled="loading"></textarea>
       </div>
 
       <div class="field" v-if="examinerType === '保護者'">
@@ -104,9 +109,10 @@ const { createApp } = Vue;
 createApp({
   data() {
     return {
-      grades: ["年少", "年中", "年長", "小学校1年", "小学校2年", "小学校3年", "小学校4年", "小学校5年", "小学校6年", "中学生"],
+      grades: ["年少", "年中", "年長", "小学校1年", "小学校2年", "小学校3年", "小学校4年", "小学校5年", "小学校6年", "中学1年", "中学2年", "中学3年", "高校1年", "高校2年", "高校3年"],
       guardianProfessions: ["作業療法士", "理学療法士", "言語聴覚士", "心理士", "社会福祉士", "その他"],
       examinerType: "",
+      examinerTypeOther: "",
       guardianProfession: "",
       guardianProfessionOther: "",
       examDate: new Date().toISOString().slice(0, 10),
@@ -138,6 +144,7 @@ createApp({
         token: this.session.token,
         body: {
           examiner_type: this.examinerType,
+          examiner_type_other: this.examinerType === "その他" ? this.examinerTypeOther : "",
           guardian_profession: this.examinerType === "保護者" ? this.guardianProfession : "",
           guardian_profession_other: this.examinerType === "保護者" && this.guardianProfession === "その他" ? this.guardianProfessionOther : "",
           exam_date: this.examDate,
