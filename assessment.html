@@ -53,7 +53,7 @@
         <div class="progress">{{ practiceMode ? '練習' : progressText }}</div>
 
         <p v-if="practiceMode" class="question-prompt question-prompt--practice">まずは1回、練習してみましょう。</p>
-        <p class="question-prompt">下のイラストは何をしているところですか。また、何を表していると思いますか?</p>
+        <p class="question-prompt">下の絵は何をしているところですか? または、なんの絵ですか?</p>
 
         <div class="illustration-wrap">
           <img :src="illustration.image_url" alt="イラスト" @error="onImageError" />
