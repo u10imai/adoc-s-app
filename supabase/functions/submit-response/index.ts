@@ -59,6 +59,10 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = getSupabaseAdmin();
+    // 通信不良等で同じ設問への保存が二重送信された場合、既存行への
+    // UPDATEはresponses側の回答本体列ロックトリガーで必ず失敗するため、
+    // ignoreDuplicatesで「既に保存済みなら何もしない」を明示し、
+    // 再送信自体は成功扱いにする(初回保存の内容を正として扱う)。
     const { error } = await supabase.from("responses").upsert(
       {
         subject_id: subjectId,
@@ -69,7 +73,7 @@ Deno.serve(async (req) => {
         selected_choice_label: usedChoices ? selectedChoiceLabel : null,
         recorded_at: new Date().toISOString(),
       },
-      { onConflict: "subject_id,illustration_id" },
+      { onConflict: "subject_id,illustration_id", ignoreDuplicates: true },
     );
     if (error) throw error;
 
