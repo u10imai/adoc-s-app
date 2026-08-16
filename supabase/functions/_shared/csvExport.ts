@@ -24,36 +24,61 @@ function first<T>(v: T | T[] | null): T | null {
   return v;
 }
 
-export async function fetchSubjectsCsv(supabase: SupabaseAdminClient): Promise<string> {
-  const { data, error } = await supabase
-    .from("subjects")
-    .select(`
-      subject_code, subject_type, examiner_type, examiner_type_other, guardian_profession, guardian_profession_other,
-      exam_date, birth_date, gender, age_months, grade, age_group,
-      has_diagnosis, diagnosis_status, diagnosis_note, basic_info_completed,
-      child_difficulty_rating, caregiver_comprehension_rating, created_at
-    `)
-    .order("subject_code", { ascending: true });
-  if (error) throw error;
+// PostgRESTは1リクエストあたりのデフォルト最大行数(通常1000件)を超える分を
+// 黙って切り捨てるため、.range()で全件を取り切るまでページングする。
+const PAGE_SIZE = 1000;
 
-  const rows = (data ?? []).map((r) => ({ ...r, created_at: formatJst(r.created_at) }));
+async function fetchAllPages<T>(
+  buildPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+): Promise<T[]> {
+  const all: T[] = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await buildPage(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    const page = data ?? [];
+    all.push(...page);
+    if (page.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return all;
+}
+
+export async function fetchSubjectsCsv(supabase: SupabaseAdminClient): Promise<string> {
+  const data = await fetchAllPages((from, to) =>
+    supabase
+      .from("subjects")
+      .select(`
+        subject_code, subject_type, examiner_type, examiner_type_other, guardian_profession, guardian_profession_other,
+        exam_date, birth_date, gender, age_months, grade, age_group,
+        has_diagnosis, diagnosis_status, diagnosis_note, basic_info_completed,
+        child_difficulty_rating, caregiver_comprehension_rating, created_at
+      `)
+      .order("subject_code", { ascending: true })
+      .range(from, to)
+  );
+
+  const rows = data.map((r) => ({ ...r, created_at: formatJst(r.created_at) }));
   return toCsv(rows, SUBJECT_COLUMNS);
 }
 
 export async function fetchResponsesCsv(supabase: SupabaseAdminClient): Promise<string> {
-  const { data, error } = await supabase
-    .from("responses")
-    .select(`
-      verbal_response, used_choices, presented_choices, selected_choice_label, recorded_at,
-      human_score, human_scorer, human_scored_at,
-      ai_score, ai_confidence, ai_scored_at, final_score, agreement_flag,
-      subjects ( subject_code ),
-      illustrations ( correct_label, age_group )
-    `)
-    .order("recorded_at", { ascending: true });
-  if (error) throw error;
+  const data = await fetchAllPages((from, to) =>
+    supabase
+      .from("responses")
+      .select(`
+        verbal_response, used_choices, presented_choices, selected_choice_label, recorded_at,
+        human_score, human_scorer, human_scored_at,
+        ai_score, ai_confidence, ai_scored_at, final_score, agreement_flag,
+        subjects ( subject_code ),
+        illustrations ( correct_label, age_group )
+      `)
+      .order("recorded_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 
-  const rows = (data ?? []).map((r) => {
+  const rows = data.map((r) => {
     const subject = first(r.subjects as unknown);
     const illustration = first(r.illustrations as unknown);
     return {
