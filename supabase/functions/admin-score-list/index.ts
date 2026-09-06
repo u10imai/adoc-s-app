@@ -41,20 +41,20 @@ Deno.serve(async (req) => {
     const supabase = getSupabaseAdmin();
 
     if (!subjectId) {
-      const [{ data: subjects, error: subjectsError }, { data: responses, error: respError }] = await Promise.all([
+      const [{ data: subjects, error: subjectsError }, { data: responseCounts, error: respError }] = await Promise.all([
         supabase.from("subjects").select("id, subject_code"),
-        supabase.from("responses").select("subject_id, human_score"),
+        // 回答は件数だけ必要。全行取得するとPostgRESTの最大行数で頭打ちになるため、
+        // Postgres側で被験者ごとに集計するRPCを使う。
+        supabase.rpc("response_counts_by_subject"),
       ]);
       if (subjectsError) throw subjectsError;
       if (respError) throw respError;
 
       const totalBySubject = new Map<string, number>();
       const scoredBySubject = new Map<string, number>();
-      for (const r of responses ?? []) {
-        totalBySubject.set(r.subject_id, (totalBySubject.get(r.subject_id) ?? 0) + 1);
-        if (r.human_score && r.human_score !== "未評価") {
-          scoredBySubject.set(r.subject_id, (scoredBySubject.get(r.subject_id) ?? 0) + 1);
-        }
+      for (const r of responseCounts ?? []) {
+        totalBySubject.set(r.subject_id, Number(r.total));
+        scoredBySubject.set(r.subject_id, Number(r.scored));
       }
 
       const summary = (subjects ?? [])

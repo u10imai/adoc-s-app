@@ -33,11 +33,13 @@ Deno.serve(async (req) => {
   try {
     const supabase = getSupabaseAdmin();
 
-    const [{ data: subjects, error: subjectsError }, { data: illustrations, error: illError }, { data: responses, error: respError }] =
+    const [{ data: subjects, error: subjectsError }, { data: illustrations, error: illError }, { data: responseCounts, error: respError }] =
       await Promise.all([
         supabase.from("subjects").select("id, subject_code, subject_type, password_plain, age_group, basic_info_completed, created_at"),
         supabase.from("illustrations").select("age_group"),
-        supabase.from("responses").select("subject_id"),
+        // 回答は件数だけ必要。全行取得するとPostgRESTの最大行数で頭打ちになるため、
+        // Postgres側で被験者ごとに集計するRPCを使う。
+        supabase.rpc("response_counts_by_subject"),
       ]);
 
     if (subjectsError) throw subjectsError;
@@ -56,8 +58,8 @@ Deno.serve(async (req) => {
     }
 
     const answeredBySubject = new Map<string, number>();
-    for (const r of responses ?? []) {
-      answeredBySubject.set(r.subject_id, (answeredBySubject.get(r.subject_id) ?? 0) + 1);
+    for (const r of responseCounts ?? []) {
+      answeredBySubject.set(r.subject_id, Number(r.total));
     }
 
     const list = (subjects ?? []).map((s) => ({
