@@ -6,3 +6,6 @@ node_modules/
 supabase/.temp/
 cloudinary-illustrations.csv
 illustrations-insert.sql
+
+# 被験者IDとパスワードの配布用一覧(認証情報のため公開リポジトリに含めない)
+id-lists/
