@@ -42,7 +42,8 @@ Deno.serve(async (req) => {
 
     if (!subjectId) {
       const [{ data: subjects, error: subjectsError }, { data: responseCounts, error: respError }] = await Promise.all([
-        supabase.from("subjects").select("id, subject_code"),
+        // 棄却された被験者(excluded=true)は採点対象から外す。
+        supabase.from("subjects").select("id, subject_code").eq("excluded", false),
         // 回答は件数だけ必要。全行取得するとPostgRESTの最大行数で頭打ちになるため、
         // Postgres側で被験者ごとに集計するRPCを使う。
         supabase.rpc("response_counts_by_subject"),

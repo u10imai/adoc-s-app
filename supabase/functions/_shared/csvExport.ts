@@ -6,14 +6,16 @@ import { getSupabaseAdmin } from "./supabaseAdmin.ts";
 type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
 
 export const SUBJECT_COLUMNS = [
-  "subject_code", "subject_type", "examiner_type", "examiner_type_other", "guardian_profession", "guardian_profession_other",
+  "subject_code", "subject_type", "excluded", "exclusion_category", "exclusion_note",
+  "examiner_type", "examiner_type_other", "guardian_profession", "guardian_profession_other",
   "exam_date", "birth_date", "gender", "age_months", "grade", "age_group",
   "has_diagnosis", "diagnosis_status", "diagnosis_note", "basic_info_completed",
   "child_difficulty_rating", "caregiver_comprehension_rating", "created_at",
 ];
 
 export const RESPONSE_COLUMNS = [
-  "subject_code", "illustration_correct_label", "illustration_age_group",
+  "subject_code", "subject_excluded", "subject_exclusion_category",
+  "illustration_correct_label", "illustration_age_group",
   "verbal_response", "used_choices", "presented_choices", "selected_choice_label",
   "recorded_at", "human_score", "human_scorer", "human_scored_at",
   "ai_score", "ai_confidence", "ai_scored_at", "final_score", "agreement_flag",
@@ -49,7 +51,8 @@ export async function fetchSubjectsCsv(supabase: SupabaseAdminClient): Promise<s
     supabase
       .from("subjects")
       .select(`
-        subject_code, subject_type, examiner_type, examiner_type_other, guardian_profession, guardian_profession_other,
+        subject_code, subject_type, excluded, exclusion_category, exclusion_note,
+        examiner_type, examiner_type_other, guardian_profession, guardian_profession_other,
         exam_date, birth_date, gender, age_months, grade, age_group,
         has_diagnosis, diagnosis_status, diagnosis_note, basic_info_completed,
         child_difficulty_rating, caregiver_comprehension_rating, created_at
@@ -70,7 +73,7 @@ export async function fetchResponsesCsv(supabase: SupabaseAdminClient): Promise<
         verbal_response, used_choices, presented_choices, selected_choice_label, recorded_at,
         human_score, human_scorer, human_scored_at,
         ai_score, ai_confidence, ai_scored_at, final_score, agreement_flag,
-        subjects ( subject_code ),
+        subjects ( subject_code, excluded, exclusion_category ),
         illustrations ( correct_label, age_group )
       `)
       .order("recorded_at", { ascending: true })
@@ -81,8 +84,11 @@ export async function fetchResponsesCsv(supabase: SupabaseAdminClient): Promise<
   const rows = data.map((r) => {
     const subject = first(r.subjects as unknown);
     const illustration = first(r.illustrations as unknown);
+    const subj = subject as { subject_code?: string; excluded?: boolean; exclusion_category?: string } | null;
     return {
-      subject_code: (subject as { subject_code?: string } | null)?.subject_code ?? null,
+      subject_code: subj?.subject_code ?? null,
+      subject_excluded: subj?.excluded ?? null,
+      subject_exclusion_category: subj?.exclusion_category ?? null,
       illustration_correct_label: (illustration as { correct_label?: string } | null)?.correct_label ?? null,
       illustration_age_group: (illustration as { age_group?: string } | null)?.age_group ?? null,
       verbal_response: r.verbal_response,

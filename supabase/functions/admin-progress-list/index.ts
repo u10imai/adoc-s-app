@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
 
     const [{ data: subjects, error: subjectsError }, { data: illustrations, error: illError }, { data: responseCounts, error: respError }] =
       await Promise.all([
-        supabase.from("subjects").select("id, subject_code, subject_type, password_plain, age_group, basic_info_completed, created_at"),
+        supabase.from("subjects").select("id, subject_code, subject_type, password_plain, age_group, basic_info_completed, created_at, excluded, exclusion_category, exclusion_note"),
         supabase.from("illustrations").select("age_group"),
         // 回答は件数だけ必要。全行取得するとPostgRESTの最大行数で頭打ちになるため、
         // Postgres側で被験者ごとに集計するRPCを使う。
@@ -71,6 +71,9 @@ Deno.serve(async (req) => {
       created_at: formatJst(s.created_at),
       answered: answeredBySubject.get(s.id) ?? 0,
       total: s.age_group ? totalByGroup.get(s.age_group as AgeGroup) ?? 0 : null,
+      excluded: s.excluded ?? false,
+      exclusion_category: s.exclusion_category ?? null,
+      exclusion_note: s.exclusion_note ?? null,
     }));
 
     list.sort((a, b) => a.subject_code.localeCompare(b.subject_code, "en"));

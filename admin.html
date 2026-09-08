@@ -72,15 +72,20 @@
               <th>区分</th>
               <th>パスワード</th>
               <th>基本情報</th>
+              <th>棄却</th>
               <th>発行日時</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="s in progressList" :key="s.subject_code">
+            <tr v-for="s in progressList" :key="s.subject_code" :class="{ 'row-excluded': s.excluded }">
               <td>{{ s.subject_code }}</td>
               <td>{{ s.subject_type }}</td>
               <td>{{ s.password }}</td>
               <td>{{ s.basic_info_completed ? '完了' : '未完了' }}</td>
+              <td>
+                <span v-if="s.excluded" :title="s.exclusion_note || ''">棄却（{{ s.exclusion_category }}）</span>
+                <span v-else>-</span>
+              </td>
               <td>{{ s.created_at }}</td>
             </tr>
           </tbody>
@@ -104,15 +109,20 @@
               <th>年齢群</th>
               <th>基本情報</th>
               <th>進捗</th>
+              <th>棄却</th>
               <th>登録日時</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="s in progressList" :key="s.subject_code">
+            <tr v-for="s in progressList" :key="s.subject_code" :class="{ 'row-excluded': s.excluded }">
               <td>{{ s.subject_code }}</td>
               <td>{{ s.age_group || '(未設定)' }}</td>
               <td>{{ s.basic_info_completed ? '完了' : '未完了' }}</td>
               <td>{{ s.total !== null ? `${s.answered}/${s.total}` : '-' }}</td>
+              <td>
+                <span v-if="s.excluded" :title="s.exclusion_note || ''">棄却（{{ s.exclusion_category }}）</span>
+                <span v-else>-</span>
+              </td>
               <td>{{ s.created_at }}</td>
             </tr>
           </tbody>
