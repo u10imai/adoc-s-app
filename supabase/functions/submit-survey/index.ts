@@ -39,16 +39,23 @@ Deno.serve(async (req) => {
 
   let childDifficultyRating = "";
   let caregiverComprehensionRating = "";
+  let caregiverSkipped = false;
 
   try {
     const body = await req.json();
     childDifficultyRating = String(body.child_difficulty_rating ?? "");
     caregiverComprehensionRating = String(body.caregiver_comprehension_rating ?? "");
+    caregiverSkipped = body.caregiver_skipped === true;
   } catch {
     return jsonResponse({ ok: false, message: MESSAGES.NETWORK_ERROR }, 400);
   }
 
-  if (!DIFFICULTY_RATINGS.includes(childDifficultyRating) || !COMPREHENSION_RATINGS.includes(caregiverComprehensionRating)) {
+  // 保護者が「実施の様子を見ていない(中学生以上が本人のみで回答)」を選んだ場合のみ、
+  // 保護者向け設問は空欄(null)で保存する。それ以外は従来どおり必須。
+  if (!DIFFICULTY_RATINGS.includes(childDifficultyRating)) {
+    return jsonResponse({ ok: false, message: MESSAGES.NETWORK_ERROR }, 400);
+  }
+  if (!caregiverSkipped && !COMPREHENSION_RATINGS.includes(caregiverComprehensionRating)) {
     return jsonResponse({ ok: false, message: MESSAGES.NETWORK_ERROR }, 400);
   }
 
@@ -58,7 +65,7 @@ Deno.serve(async (req) => {
       .from("subjects")
       .update({
         child_difficulty_rating: childDifficultyRating,
-        caregiver_comprehension_rating: caregiverComprehensionRating,
+        caregiver_comprehension_rating: caregiverSkipped ? null : caregiverComprehensionRating,
       })
       .eq("id", subjectId);
 

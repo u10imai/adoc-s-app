@@ -29,7 +29,13 @@
           <label>保護者・検査者の方へ:お子さんはどれくらい理解できていたと思いますか</label>
           <div class="radio-group radio-group--scale">
             <label v-for="opt in comprehensionOptions" :key="opt">
-              <input type="radio" :value="opt" v-model="caregiverComprehensionRating" :disabled="surveySubmitting" /> {{ opt }}
+              <input type="radio" :value="opt" v-model="caregiverComprehensionRating" :disabled="surveySubmitting || caregiverSkipped" /> {{ opt }}
+            </label>
+          </div>
+          <div class="radio-group radio-group--skip">
+            <label>
+              <input type="checkbox" v-model="caregiverSkipped" :disabled="surveySubmitting" />
+              中学生以上の場合: 保護者と離れて実施したため、不明
             </label>
           </div>
         </div>
@@ -149,6 +155,7 @@ createApp({
       surveyCompleted: false,
       childDifficultyRating: "",
       caregiverComprehensionRating: "",
+      caregiverSkipped: false,
       surveySubmitting: false,
       surveyErrorMessage: "",
       difficultyOptions: ["とても簡単だった", "簡単だった", "普通", "難しかった", "とても難しかった"],
@@ -169,7 +176,12 @@ createApp({
       return this.done && !this.surveyCompleted;
     },
     canSubmitSurvey() {
-      return Boolean(this.childDifficultyRating) && Boolean(this.caregiverComprehensionRating);
+      return Boolean(this.childDifficultyRating) && (this.caregiverSkipped || Boolean(this.caregiverComprehensionRating));
+    },
+  },
+  watch: {
+    caregiverSkipped(skipped) {
+      if (skipped) this.caregiverComprehensionRating = "";
     },
   },
   mounted() {
@@ -299,6 +311,7 @@ createApp({
         body: {
           child_difficulty_rating: this.childDifficultyRating,
           caregiver_comprehension_rating: this.caregiverComprehensionRating,
+          caregiver_skipped: this.caregiverSkipped,
         },
       });
 
