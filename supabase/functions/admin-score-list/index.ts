@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
           };
         })
         .filter((s) => s.total > 0)
-        .sort((a, b) => a.subject_code.localeCompare(b.subject_code, "en"));
+        .sort((a, b) => Number(a.subject_code) - Number(b.subject_code));
 
       return jsonResponse({ ok: true, mode: "summary", subjects: summary });
     }

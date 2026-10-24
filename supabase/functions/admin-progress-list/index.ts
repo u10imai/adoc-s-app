@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
       exclusion_note: s.exclusion_note ?? null,
     }));
 
-    list.sort((a, b) => a.subject_code.localeCompare(b.subject_code, "en"));
+    list.sort((a, b) => Number(a.subject_code) - Number(b.subject_code));
 
     return jsonResponse({ ok: true, subjects: list });
   } catch (e) {
